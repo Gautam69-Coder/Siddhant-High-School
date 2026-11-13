@@ -1,0 +1,10 @@
+{
+  "description": "Explore Siddhant High School’s academics, campus, student life, events, and admissions, helping families discover the school and connect with its community.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

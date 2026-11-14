@@ -14,6 +14,7 @@ export const InputField = React.forwardRef(({
   containerClassName = '',
   leftIcon: LeftIcon,
   rightIcon: RightIcon,
+  rightAction,
   ...props
 }, ref) => {
   const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
@@ -50,7 +51,7 @@ export const InputField = React.forwardRef(({
               'w-full h-11 px-3.5 py-2.5 rounded-[10px] bg-white text-slate-900 border text-sm transition-all duration-200 outline-none',
               'placeholder:text-slate-400',
               LeftIcon ? 'pl-10' : '',
-              RightIcon ? 'pr-10' : '',
+              RightIcon || rightAction ? 'pr-10' : '',
               error
                 ? 'border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-200'
                 : 'border-slate-300 focus:border-brand-interactive focus:ring-2 focus:ring-blue-100',
@@ -63,6 +64,11 @@ export const InputField = React.forwardRef(({
         {RightIcon && (
           <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
             <RightIcon className="w-4 h-4" aria-hidden="true" />
+          </div>
+        )}
+        {rightAction && (
+          <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+            {rightAction}
           </div>
         )}
       </div>

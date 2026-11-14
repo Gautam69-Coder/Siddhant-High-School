@@ -4,7 +4,8 @@ import { Navigate, Outlet } from 'react-router-dom';
 export const ProtectedAdminRoute = () => {
   const token = localStorage.getItem('shs_admin_token');
 
-  if (!token) {
+  if (token !== 'shs_demo_jwt_token_super_admin') {
+    localStorage.removeItem('shs_admin_token');
     return <Navigate to="/admin/login" replace />;
   }
 

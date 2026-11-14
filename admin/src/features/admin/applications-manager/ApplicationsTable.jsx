@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
@@ -21,11 +22,8 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  initialApplications,
-  gradeFilterOptions,
-  applicationStatusTabs,
-} from '../mockData';
+import { gradeFilterOptions, applicationStatusTabs } from '../mockData';
+import { adminStorageService } from '../services/adminStorageService';
 
 export const ApplicationsTable = () => {
   const [filter, setFilter] = useState('All');
@@ -34,15 +32,48 @@ export const ApplicationsTable = () => {
   const [selectedApp, setSelectedApp] = useState(null);
   const [inspectedDoc, setInspectedDoc] = useState(null);
   const [actionSuccessNotice, setActionSuccessNotice] = useState('');
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const [applications, setApplications] = useState(initialApplications);
+  const [applications, setApplications] = useState(() => adminStorageService.getApplications());
+
+  const selectedApplicationId = location.state?.selectedApplicationId;
+  useEffect(() => {
+    if (!selectedApplicationId) return;
+
+    const selectedApplication = applications.find((app) => app.appId === selectedApplicationId);
+    if (selectedApplication) setSelectedApp(selectedApplication);
+
+    const remainingState = { ...location.state };
+    delete remainingState.selectedApplicationId;
+    navigate(`${location.pathname}${location.search}${location.hash}`, {
+      replace: true,
+      state: Object.keys(remainingState).length > 0 ? remainingState : null,
+    });
+  }, [applications, location.hash, location.pathname, location.search, location.state, navigate, selectedApplicationId]);
+
+  const saveApplications = (updatedApplications) => {
+    try {
+      adminStorageService.saveApplications(updatedApplications);
+      return JSON.stringify(adminStorageService.getApplications()) === JSON.stringify(updatedApplications);
+    } catch (error) {
+      console.warn('Failed to save admissions changes:', error);
+      return false;
+    }
+  };
 
   const handleStatusChange = (id, newStatus) => {
-    setApplications(
-      applications.map((app) => (app.id === id ? { ...app, status: newStatus } : app))
+    const updatedApplications = applications.map((app) =>
+      app.id === id ? { ...app, status: newStatus } : app
     );
+    if (!saveApplications(updatedApplications)) {
+      setActionSuccessNotice('');
+      return;
+    }
+
+    setApplications(updatedApplications);
     if (selectedApp && selectedApp.id === id) {
-      setSelectedApp({ ...selectedApp, status: newStatus });
+      setSelectedApp(updatedApplications.find((app) => app.id === id));
     }
     setActionSuccessNotice(`Application #${id} status changed to "${newStatus.toUpperCase()}".`);
     setTimeout(() => setActionSuccessNotice(''), 3000);
@@ -50,14 +81,22 @@ export const ApplicationsTable = () => {
 
   const handleToggleDocVerification = (docName) => {
     if (!selectedApp) return;
-    const updatedDocs = selectedApp.documents.map((d) =>
+    const currentApp = applications.find((app) => app.id === selectedApp.id);
+    if (!currentApp) return;
+
+    const updatedDocs = currentApp.documents.map((d) =>
       d.name === docName ? { ...d, verified: !d.verified } : d
     );
-    const updatedApp = { ...selectedApp, documents: updatedDocs };
+    const updatedApp = { ...currentApp, documents: updatedDocs };
+    const updatedApplications = applications.map((app) =>
+      app.id === updatedApp.id ? updatedApp : app
+    );
+    if (!saveApplications(updatedApplications)) return;
+
+    setApplications(updatedApplications);
     setSelectedApp(updatedApp);
-    setApplications(applications.map((a) => (a.id === selectedApp.id ? updatedApp : a)));
     if (inspectedDoc && inspectedDoc.name === docName) {
-      setInspectedDoc({ ...inspectedDoc, verified: !inspectedDoc.verified });
+      setInspectedDoc(updatedDocs.find((doc) => doc.name === docName));
     }
   };
 

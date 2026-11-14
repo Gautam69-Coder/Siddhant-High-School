@@ -5,6 +5,11 @@ import { twMerge } from 'tailwind-merge';
 
 export const FileDropzone = ({
   onFilesSelected,
+  selectedFiles,
+  validateFile,
+  getFileKey,
+  existingFileKeys = [],
+  duplicateFileMessage = 'This image is already selected.',
   initialFiles = [],
   accept = '.pdf,.jpg,.jpeg,.png',
   maxSizeMB = 5,
@@ -17,11 +22,52 @@ export const FileDropzone = ({
   const [fileList, setFileList] = useState(initialFiles);
   const [errorMessage, setErrorMessage] = useState('');
   const inputRef = useRef(null);
+  const isControlled = selectedFiles !== undefined;
+  const currentFiles = isControlled ? selectedFiles : fileList;
 
   const handleFiles = (incomingFiles) => {
     setErrorMessage('');
     const validFiles = [];
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
+    if (validateFile) {
+      const rejectedFiles = [];
+      const existingKeys = new Set(
+        [
+          ...currentFiles.map((file) => getFileKey?.(file)),
+          ...existingFileKeys,
+        ].filter(Boolean)
+      );
+
+      for (let i = 0; i < incomingFiles.length; i++) {
+        const file = incomingFiles[i];
+        const validationMessage = file.size > maxSizeBytes
+          ? `File exceeds the ${maxSizeMB}MB limit.`
+          : validateFile(file);
+        const fileKey = getFileKey?.(file);
+
+        if (validationMessage) {
+          rejectedFiles.push({ file, reason: validationMessage });
+        } else if (fileKey && existingKeys.has(fileKey)) {
+          rejectedFiles.push({ file, reason: duplicateFileMessage });
+        } else {
+          validFiles.push(file);
+          if (fileKey) existingKeys.add(fileKey);
+        }
+      }
+
+      const updated = multiple ? [...currentFiles, ...validFiles] : validFiles;
+      if (!isControlled) setFileList(updated);
+      if (onFilesSelected) {
+        onFilesSelected(updated, { addedFiles: validFiles, removedFiles: [], rejectedFiles });
+      }
+      if (rejectedFiles.length > 0) {
+        setErrorMessage(rejectedFiles
+          .map(({ file, reason }) => `${file.name}: ${reason}`)
+          .join(' '));
+      }
+      return;
+    }
 
     for (let i = 0; i < incomingFiles.length; i++) {
       const file = incomingFiles[i];
@@ -32,8 +78,8 @@ export const FileDropzone = ({
       validFiles.push(file);
     }
 
-    const updated = multiple ? [...fileList, ...validFiles] : validFiles;
-    setFileList(updated);
+    const updated = multiple ? [...currentFiles, ...validFiles] : validFiles;
+    if (!isControlled) setFileList(updated);
     if (onFilesSelected) onFilesSelected(updated);
   };
 
@@ -57,9 +103,16 @@ export const FileDropzone = ({
   };
 
   const handleRemove = (index) => {
-    const updated = fileList.filter((_, i) => i !== index);
-    setFileList(updated);
-    if (onFilesSelected) onFilesSelected(updated);
+    const removedFile = currentFiles[index];
+    const updated = currentFiles.filter((_, i) => i !== index);
+    if (!isControlled) setFileList(updated);
+    if (onFilesSelected) {
+      if (validateFile) {
+        onFilesSelected(updated, { addedFiles: [], removedFiles: [removedFile], rejectedFiles: [] });
+      } else {
+        onFilesSelected(updated);
+      }
+    }
   };
 
   return (
@@ -87,6 +140,7 @@ export const FileDropzone = ({
           className="hidden"
           onChange={(e) => {
             if (e.target.files) handleFiles(e.target.files);
+            if (validateFile) e.target.value = '';
           }}
         />
 
@@ -108,9 +162,9 @@ export const FileDropzone = ({
       )}
 
       {/* Selected files preview pills */}
-      {fileList.length > 0 && (
+      {currentFiles.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-2">
-          {fileList.map((file, idx) => (
+          {currentFiles.map((file, idx) => (
             <div
               key={idx}
               className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-[8px] text-xs shadow-sm"

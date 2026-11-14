@@ -1,255 +1,130 @@
-# 🏫 Siddhant High School — Web Portal & Super Admin OS
+﻿Siddhant High School — Admin Panel Improvements
 
-[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Redux Toolkit](https://img.shields.io/badge/Redux_Toolkit-2.3-764ABC?style=flat-square&logo=redux&logoColor=white)](https://redux-toolkit.js.org/)
-[![Framer Motion](https://img.shields.io/badge/Framer_Motion-11.11-0055FF?style=flat-square&logo=framer&logoColor=white)](https://www.framer.com/motion/)
-[![License](https://img.shields.io/badge/License-Proprietary-slate.svg?style=flat-square)](#)
+About This Work
 
-> **Official web portal and administrative management system for Siddhant High School**, managed by the **Shubham Education & Welfare Society**. Designed to streamline school operations, candidate admissions, credential verification, communications, and institutional content management.
+This document describes the bug fixes, improvements, and functionality implemented in the Siddhant High School Admin Panel prototype.
+
+The improvements focus on authentication, data validation, search functionality, record management, local data persistence, and user experience.
 
 ---
 
-## 📑 Table of Contents
+Demo Login Credentials
 
-- [Overview](#-overview)
-- [Key Features](#-key-features)
-  - [Super Admin OS Dashboard](#1-super-admin-os-dashboard)
-  - [Admissions & Verification Center](#2-admissions--verification-center)
-  - [Parent Enquiries Manager](#3-parent-enquiries-manager)
-  - [School Content Management (CMS)](#4-school-content-management-cms)
-  - [Command Palette (`Ctrl + K`)](#5-command-palette-ctrl--k)
-  - [Offline Reporting & CSV Export](#6-offline-reporting--csv-export)
-- [Technology Stack](#-technology-stack)
-- [Project Architecture & Structure](#-project-architecture--structure)
-- [Quick Start Guide](#-quick-start-guide)
-  - [Prerequisites](#prerequisites)
-  - [Installation & Local Setup](#installation--local-setup)
-  - [Running the Admin Panel](#running-the-admin-panel)
-  - [Production Build](#production-build)
-- [Demo Admin Credentials](#-demo-admin-credentials)
-- [Future Roadmap](#-future-roadmap)
-- [Contributing & Code Style](#-contributing--code-style)
-- [Institution & Governance](#-institution--governance)
+Use the following credentials to access the Admin Panel:
+
+Field| Credentials
+Username / Email| "admin@siddhanthighschool.edu"
+Password| "admin123"
+
+Note: These are demo credentials for testing the prototype, not production login credentials.
 
 ---
 
-## 🌟 Overview
+Implemented Improvements
 
-The **Siddhant High School** digital platform modernizes institutional workflows through an intuitive, high-performance web interface. The system provides school administrators, admissions officers, and faculty coordinators with powerful tools to triage incoming student applications, scrutinize academic documents, schedule school-wide events, publish notices, and handle parent inquiries in real time.
+1. Authentication & Protected Routes
 
----
+- Added validation for login fields.
+- Login checks the configured demo email and password.
+- Added password show/hide functionality.
+- Added an incorrect-credentials error message.
+- Added a sign-out confirmation popup.
+- Protected the dashboard from unauthenticated access after logout.
 
-## 🚀 Key Features
+2. Admissions Management
 
-### 1. Super Admin OS Dashboard
-- **Executive KPI Cards**: Real-time monitoring of total applications, pending candidate evaluations, confirmed admissions, and new parent inquiries.
-- **Conversion Funnel Analytics**: Multi-stage pipeline tracking applicants from initial submission to final enrollment.
-- **Inbound Velocity Sparkline**: 7-day intake trend breakdown with peak submission detection.
-- **Grade & Stream Capacity Monitor**: Live capacity gauges showing seats filled vs. total available across all grades.
-- **Priority Action Desk**: Direct triage for urgent operational tasks and pending reviews.
+- Improved candidate search by student name and application ID.
+- Added and improved grade and status filters.
+- Added local persistence for application status changes.
+- Added persistence for document verification changes.
+- Fixed CSV export functionality.
+- Corrected document filenames in exported CSV files.
 
-### 2. Admissions & Verification Center
-- **Interactive Candidate Registry**: Searchable and filterable table displaying application numbers (`#SHS-XXXX`), candidate details, guardian contacts, and status badges.
-- **Detailed Inspection Drawer**: Slide-over panel displaying candidate bio data, academic history, and contact information.
-- **Document Scrutinizer Modal**: Built-in document inspection viewer with tamper-check simulations and one-click cryptographic verification seals.
-- **Determination Workflow**: Immediate status transitions (**Pending**, **Approved**, **Rejected**) with instant toast feedback.
+3. Parent Enquiries
 
-### 3. Parent Enquiries Manager
-- Real-time logging and triage for prospective student questions and campus tour requests.
-- Contact tracking (Phone, Email, In-Person) with resolution status badges.
+- Added search by parent name, phone number, and email.
+- Added All, Pending, and Resolved filters.
+- Added enquiry counts for each status.
+- Added local persistence for status changes.
+- Added email validation before opening an email application.
 
-### 4. School Content Management (CMS)
-- **News & Announcements**: Create, edit, pin, and publish institutional notices and circulars.
-- **Academic & Events Calendar**: Schedule webinars, exams, athletic meets, and holidays.
-- **Faculty & Staff Directory**: Manage educator profiles, qualifications, and department allocations.
-- **Media Gallery Manager**: Categorized campus photo albums and event visual highlights.
+4. News & Announcements
 
-### 5. Command Palette (`Ctrl + K` / `Cmd + K`)
-- Global keyboard-driven launcher for instant candidate search by name or application ID.
-- Quick navigation shortcuts across dashboard pages and administrative tools.
+- Added functionality to create, edit, and delete announcements.
+- Added category selection, including Cultural.
+- Added urgent notice selection.
+- Updated sorting to display urgent notices first.
+- Added local persistence for announcement changes.
 
-### 6. Offline Reporting & CSV Export
-- Single-click CSV export utility to download formatted applicant records and enquiry logs for offline audits, compliance, and archiving.
+5. Event Calendar
 
----
+- Added functionality to create, edit, and delete events.
+- Added event category selection.
+- Added date validation.
+- Improved event sorting.
+- Added local persistence for event changes.
 
-## 🛠️ Technology Stack
+6. Faculty Directory
 
-| Layer | Technologies |
-| :--- | :--- |
-| **Frontend Core** | [React 18](https://react.dev/) + [Vite 5](https://vitejs.dev/) |
-| **Routing** | [React Router v6](https://reactrouter.com/) (Browser routing, nested layouts, code splitting with `Suspense` and `lazy`) |
-| **State Management** | [Redux Toolkit](https://redux-toolkit.js.org/) (Auth, UI drawers, and CMS state) |
-| **Styling** | [Tailwind CSS v3](https://tailwindcss.com/), [PostCSS](https://postcss.org/), [Autoprefixer](https://github.com/postcss/autoprefixer) |
-| **Animation & Motion** | [Framer Motion](https://www.framer.com/motion/) (Smooth page transitions, layout animations, modals) |
-| **Icons** | [Lucide React](https://lucide.dev/) |
-| **Persistence** | Browser `localStorage` abstraction layer with initial mock fallbacks (`adminStorageService`) |
-| **Tooling & Linter** | ESLint with React Hooks & React Refresh plugins |
+- Added functionality to add, edit, and delete faculty profiles.
+- Added validation for required fields.
+- Made qualifications mandatory.
+- Kept department optional.
+- Added local persistence for faculty records.
+- Added delete confirmation.
 
----
+7. Campus Media Gallery
 
-## 📂 Project Architecture & Structure
+- Added image validation for JPG, JPEG, PNG, and WebP.
+- Set a maximum upload size of 10 MB per image.
+- Added duplicate image prevention.
+- Improved image removal and deletion.
+- Added delete confirmation.
+- Added a fallback for images that fail to load.
+- Added cleanup for temporary image preview URLs.
+- Implemented IndexedDB storage for uploaded images.
 
-```plaintext
-10_Siddhant-High-School/
-├── Readme.md                          # Root project documentation
-└── admin/                             # Super Admin Web Application
-    ├── public/                        # Static assets (logos, crests, prospectus PDF)
-    │   ├── assets/
-    │   │   ├── crest.svg              # School crest & emblems
-    │   │   └── logo.png               # Official institutional logo
-    │   └── favicon.svg
-    ├── src/
-    │   ├── admin/
-    │   │   └── mockData/              # Seed data references
-    │   ├── components/
-    │   │   ├── motion/
-    │   │   │   └── PageTransition.jsx # Page fade & slide transition wrapper
-    │   │   └── ui/                    # Reusable UI component library
-    │   │       ├── Badge.jsx          # Status pill indicators
-    │   │       ├── Button.jsx         # Accessible buttons with loading states
-    │   │       ├── FileDropzone.jsx   # Drag-and-drop document uploader
-    │   │       ├── GlassCard.jsx      # Glassmorphism cards with backdrop blur
-    │   │       ├── InputField.jsx     # Form inputs with icon support & error states
-    │   │       ├── Modal.jsx          # Accessible dialogs with spring animations
-    │   │       └── Skeleton.jsx       # Content loading placeholders
-    │   ├── features/
-    │   │   └── admin/                 # Domain-specific admin feature modules
-    │   │       ├── applications-manager/ # Applications & Enquiries tables
-    │   │       ├── auth/              # Admin login card & route guards
-    │   │       ├── cms-manager/       # News, Events, Faculty & Gallery editors
-    │   │       ├── mockData/          # Structured mock database records
-    │   │       ├── reports/           # DataExportBar CSV generator
-    │   │       └── services/          # LocalStorage persistence service
-    │   ├── layouts/
-    │   │   └── AdminLayout.jsx        # Sidebar, topbar, command palette & shell
-    │   ├── pages/
-    │   │   └── admin/                 # Admin view views (Dashboard, Admissions, CMS, etc.)
-    │   ├── store/
-    │   │   └── index.js               # Redux store configuration
-    │   ├── utils/
-    │   │   └── csvExporter.js         # Browser CSV file download helper
-    │   ├── App.jsx                    # Root app provider
-    │   ├── index.css                  # Global Tailwind utility rules & fonts
-    │   ├── main.jsx                   # React DOM entry point
-    │   └── routes.jsx                 # Route definitions & lazy-loaded pages
-    ├── index.html                     # HTML template
-    ├── package.json                   # Dependencies & package scripts
-    ├── postcss.config.js              # PostCSS plugin pipeline
-    ├── tailwind.config.js             # Theme tokens, font families, and custom palettes
-    └── vite.config.js                 # Vite bundler build config
-```
+8. Global Search
+
+- Updated candidate search to use current Admissions records.
+- Added searching by candidate name, application ID, and parent name.
+- Improved candidate navigation to open the selected application.
+- Improved search matching and keyboard navigation.
+- Improved search modal accessibility.
+- Removed misleading action results that did not perform their advertised actions.
 
 ---
 
-## ⚡ Quick Start Guide
+Manual Testing Guide
 
-### Prerequisites
-Make sure you have installed on your local machine:
-- [Node.js](https://nodejs.org/) (Version **>= 18.0.0**)
-- [pnpm](https://pnpm.io/) (Recommended) or [npm](https://www.npmjs.com/)
+Follow these steps to test the implemented improvements.
 
-### Installation & Local Setup
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/Gautam-Doliya/Siddhant-High-School.git
-   cd 10_Siddhant-High-School
-   ```
-
-2. **Navigate into the Admin workspace**:
-   ```bash
-   cd admin
-   ```
-
-3. **Install dependencies**:
-   ```bash
-   pnpm install
-   # or with npm
-   npm install
-   ```
-
-### Running the Admin Panel
-
-Start the local development server with Hot Module Replacement (HMR):
-```bash
-pnpm dev
-# or: npm run dev
-```
-
-Open your browser and navigate to:
-```
-http://localhost:5173/admin/login
-```
-
-### Production Build
-
-To build the project for production deployment:
-```bash
-pnpm build
-# or: npm run build
-```
-
-To preview the generated production build locally:
-```bash
-pnpm preview
-# or: npm run preview
-```
-
-To run ESLint code verification:
-```bash
-pnpm lint
-# or: npm run lint
-```
+Module| What to test
+Authentication| Log in with valid and invalid credentials, toggle password visibility, sign out, and try accessing the dashboard after logout.
+Admissions| Search for candidates, apply filters, change application status, verify documents, refresh the page, and export CSV.
+Parent Enquiries| Search by name, phone, and email; change enquiry status; refresh; and test email validation.
+News & Announcements| Add, edit, and delete notices. Test categories, urgent selection, sorting, and refresh persistence.
+Event Calendar| Add, edit, and delete events. Test categories, invalid dates, sorting, and refresh persistence.
+Faculty Directory| Add, edit, and delete faculty records. Test required fields and delete confirmation.
+Campus Media Gallery| Upload supported images, test unsupported formats and files over 10 MB, check duplicate prevention, delete images, and refresh the page.
+Global Search| Search candidates, click candidate results, test page navigation, and try keyboard controls.
 
 ---
 
-## 🔑 Demo Admin Credentials
+Data Storage & Limitations
 
-For development and evaluation, access the administrative console using the pre-configured credentials:
-
-| Field | Demo Value |
-| :--- | :--- |
-| **Login Gateway** | `/admin/login` |
-| **Email** | `admin@siddhanthighschool.edu` |
-| **Password** | `admin123` |
-| **Role** | `SUPER_ADMIN` (Dr. Katherine Price) |
-
-> ℹ️ *Note: Authentication currently runs in simulated JWT mode with local session tokens (`shs_admin_token`) stored securely in your browser's local storage.*
+- Text records use browser localStorage where implemented.
+- Uploaded gallery images are stored using browser IndexedDB.
+- Locally stored data is available in the same browser profile.
+- Data does not automatically synchronize across different browsers, devices, or users.
+- Backend integration and Cloudinary storage have not been implemented.
+- Public website publishing and external calendar synchronization are not included in this prototype.
+- Authentication is intended for demonstration and testing, not production security.
 
 ---
 
-## 🗺️ Future Roadmap
+Purpose of These Improvements
 
-- [ ] **Public Portal**: Public-facing school website showcasing campus tour, academic curriculum, fee structures, and an online application form for prospective parents.
-- [ ] **Backend Services**: Node.js & Express RESTful API with MongoDB / PostgreSQL database integration.
-- [ ] **Email & SMS Notifications**: Automated transactional alerts for application status changes and admissions interview call letters.
-- [ ] **Parent & Student Hub**: Dedicated portal for report cards, attendance records, school bus tracking, and tuition fee payments.
-- [ ] **Role-Based Access Control (RBAC)**: Fine-grained permissions for Principal, Admissions Officers, Department Heads, and IT Staff.
+The purpose of these changes was to improve the existing Admin Panel prototype by fixing reported bugs, improving validation and search, enabling local data persistence, and making the existing administrative modules more reliable and easier to use.
 
----
-
-## 🤝 Contributing & Code Style
-
-1. Create a descriptive feature branch:
-   ```bash
-   git checkout -b feature/admissions-enhancement
-   ```
-2. Adhere to **WCAG 2.1 AA** accessibility standards and keep interactive focus rings visible.
-3. Verify formatting and linting prior to committing:
-   ```bash
-   pnpm lint
-   ```
-4. Commit changes with clear conventional commits (e.g., `feat:`, `fix:`, `docs:`).
-
----
-
-## 🏛️ Institution & Governance
-
-**Siddhant High School**  
-Under the auspices of **Shubham Education & Welfare Society**  
-*Empowering future generations through academic excellence, character development, and holistic learning.*
-
-© 2026 Shubham Education & Welfare Society. All rights reserved.
+Note: This document covers the Admin Panel improvements implemented in this contribution. It does not describe the complete school website or work completed by other contributors.

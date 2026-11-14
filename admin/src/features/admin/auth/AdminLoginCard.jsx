@@ -4,11 +4,12 @@ import { useDispatch } from 'react-redux';
 import InputField from '../../../components/ui/InputField';
 import Button from '../../../components/ui/Button';
 import GlassCard from '../../../components/ui/GlassCard';
-import { Lock, Mail, ShieldAlert, ArrowRight } from 'lucide-react';
+import { Lock, Mail, ShieldAlert, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 export const AdminLoginCard = () => {
-  const [email, setEmail] = useState('admin@siddhanthighschool.edu');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -16,23 +17,43 @@ export const AdminLoginCard = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError('Please enter your institutional email address.');
+      return;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(normalizedEmail)) {
+      setError('Invalid email or password. Please check your credentials and try again.');
+      setPassword('');
+      return;
+    }
+
+    if (!password) {
+      setError('Please enter your password.');
+      return;
+    }
+
+    setLoading(true);
+
     setTimeout(() => {
-      if (email && password) {
+      if (normalizedEmail === 'admin@siddhanthighschool.edu' && password === 'admin123') {
         const dummyToken = 'shs_demo_jwt_token_super_admin';
         localStorage.setItem('shs_admin_token', dummyToken);
         dispatch({
           type: 'auth/loginSuccess',
           payload: {
             token: dummyToken,
-            user: { email, role: 'SUPER_ADMIN', name: 'Dr. Katherine Price' },
+            user: { email: normalizedEmail, role: 'SUPER_ADMIN', name: 'Dr. Katherine Price' },
           },
         });
         navigate('/admin/dashboard');
       } else {
-        setError('Invalid admin credentials. Access restricted to authorized school officials.');
+        setError('Invalid email or password. Please check your credentials and try again.');
+        setPassword('');
       }
       setLoading(false);
     }, 600);
@@ -57,26 +78,40 @@ export const AdminLoginCard = () => {
         </div>
       )}
 
-      <form onSubmit={handleLogin} className="space-y-4">
+      <form onSubmit={handleLogin} className="space-y-4" noValidate>
         <InputField
           label="Institutional Staff Email"
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          autoComplete="username"
           leftIcon={Mail}
           placeholder="admin@siddhanthighschool.edu"
         />
 
-        <InputField
-          label="Master Key Password"
-          type="password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          leftIcon={Lock}
-          placeholder="••••••••"
-        />
+        <div className="relative">
+          <InputField
+            label="Master Key Password"
+            type={passwordVisible ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            leftIcon={Lock}
+            rightAction={(
+              <button
+                type="button"
+                onClick={() => setPasswordVisible((visible) => !visible)}
+                className="text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-interactive rounded"
+                aria-label={passwordVisible ? 'Hide password' : 'Show password'}
+                aria-pressed={passwordVisible}
+              >
+                {passwordVisible ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
+              </button>
+            )}
+            placeholder="••••••••"
+          />
+        </div>
 
         <Button
           type="submit"

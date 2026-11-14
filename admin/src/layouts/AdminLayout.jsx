@@ -1,8 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useOutlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDispatch } from 'react-redux';
 import { adminNavItems, adminSearchableItems } from '../features/admin/mockData';
+import { adminStorageService } from '../features/admin/services/adminStorageService';
 import PageTransition from '../components/motion/PageTransition';
+import Modal from '../components/ui/Modal';
+import Button from '../components/ui/Button';
 import {
   LayoutDashboard,
   GraduationCap,
@@ -18,7 +22,6 @@ import {
   ArrowRight,
   Sparkles,
   FileSpreadsheet,
-  PlusCircle,
   Bell,
   Check,
 } from 'lucide-react';
@@ -29,7 +32,6 @@ const iconMap = {
   MessageSquare,
   FileText,
   Settings,
-  PlusCircle,
   ExternalLink,
 };
 
@@ -38,19 +40,26 @@ export const AdminLayout = () => {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [searchApplications, setSearchApplications] = useState(() => adminStorageService.getApplications());
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const currentOutlet = useOutlet();
   const contentScrollRef = useRef(null);
   const searchInputRef = useRef(null);
+  const searchTriggerRef = useRef(null);
+  const searchDialogRef = useRef(null);
+  const paletteResultRefs = useRef(new Map());
+  const previousPaletteOpenRef = useRef(false);
 
   // Command palette keyboard listener (Ctrl+K or Cmd+K)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setCommandPaletteOpen((prev) => !prev);
+        if (!e.repeat) setCommandPaletteOpen((prev) => !prev);
       } else if (e.key === 'Escape') {
         setCommandPaletteOpen(false);
       }
@@ -61,27 +70,73 @@ export const AdminLayout = () => {
 
   useEffect(() => {
     if (commandPaletteOpen) {
-      setTimeout(() => searchInputRef.current?.focus(), 50);
+      previousPaletteOpenRef.current = true;
+      const focusTimer = setTimeout(() => searchInputRef.current?.focus(), 50);
       setSelectedIndex(0);
+      return () => clearTimeout(focusTimer);
+    }
+
+    if (previousPaletteOpenRef.current) {
+      previousPaletteOpenRef.current = false;
+      searchTriggerRef.current?.focus();
     }
   }, [commandPaletteOpen]);
+
+  useEffect(() => {
+    if (commandPaletteOpen) {
+      setSearchApplications(adminStorageService.getApplications());
+    }
+  }, [commandPaletteOpen, paletteQuery]);
 
   const handleLogout = () => {
     localStorage.removeItem('shs_admin_token');
     localStorage.removeItem('vtx_admin_token');
+    dispatch({ type: 'auth/logout' });
+    setLogoutConfirmOpen(false);
     navigate('/admin/login');
   };
 
-  const filteredPaletteItems = adminSearchableItems.filter((item) =>
-    item.title.toLowerCase().includes(paletteQuery.toLowerCase()) ||
-    item.type.toLowerCase().includes(paletteQuery.toLowerCase())
+  const normalizedPaletteQuery = paletteQuery.trim().toLowerCase();
+  const matchesPaletteItem = (item) => (
+    item.title.toLowerCase().includes(normalizedPaletteQuery) ||
+    item.type.toLowerCase().includes(normalizedPaletteQuery)
   );
+  const candidateItems = searchApplications
+    .filter((application) => {
+      const searchableText = [
+        application.studentName,
+        application.appId,
+        application.parentName,
+      ].filter(Boolean).join(' ').toLowerCase();
+      return searchableText.includes(normalizedPaletteQuery);
+    })
+    .filter((application) => application.appId)
+    .map((application) => ({
+      type: 'Candidate',
+      title: `${application.studentName} — ${application.appId}${application.grade ? ` (${application.grade})` : ''}`,
+      path: '/admin/admissions',
+      applicationId: application.appId,
+      iconName: 'GraduationCap',
+      resultKey: `candidate:${application.appId}`,
+    }));
+  const filteredPaletteItems = [
+    ...adminSearchableItems.filter((item) => item.type === 'Page' && matchesPaletteItem(item)),
+    ...candidateItems,
+    ...adminSearchableItems.filter((item) => item.type === 'Action' && matchesPaletteItem(item)),
+  ];
+
+  useEffect(() => {
+    if (!commandPaletteOpen || filteredPaletteItems.length === 0) return;
+    paletteResultRefs.current.get(selectedIndex)?.scrollIntoView?.({ block: 'nearest' });
+  }, [commandPaletteOpen, selectedIndex, normalizedPaletteQuery, searchApplications]);
 
   const handleExecutePaletteItem = (item) => {
     setCommandPaletteOpen(false);
     setPaletteQuery('');
     if (item.external) {
       window.open(item.path, '_blank');
+    } else if (item.type === 'Candidate') {
+      navigate(item.path, { state: { selectedApplicationId: item.applicationId } });
     } else {
       navigate(item.path);
     }
@@ -99,6 +154,25 @@ export const AdminLayout = () => {
       if (filteredPaletteItems[selectedIndex]) {
         handleExecutePaletteItem(filteredPaletteItems[selectedIndex]);
       }
+    }
+  };
+
+  const handlePaletteDialogKeyDown = (e) => {
+    if (e.key !== 'Tab') return;
+
+    const focusableElements = Array.from(
+      searchDialogRef.current?.querySelectorAll('input:not([disabled]), button:not([disabled])') || []
+    );
+    if (focusableElements.length === 0) return;
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+    if (e.shiftKey && document.activeElement === firstElement) {
+      e.preventDefault();
+      lastElement.focus();
+    } else if (!e.shiftKey && document.activeElement === lastElement) {
+      e.preventDefault();
+      firstElement.focus();
     }
   };
 
@@ -185,7 +259,7 @@ export const AdminLayout = () => {
           </Link>
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={() => setLogoutConfirmOpen(true)}
             className="w-full flex items-center gap-3 px-3.5 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-left"
           >
             <LogOut className="w-4 h-4" />
@@ -203,6 +277,7 @@ export const AdminLayout = () => {
         <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 sticky top-0 z-30">
           <div className="flex items-center gap-4 flex-1 max-w-md">
             <button
+              ref={searchTriggerRef}
               type="button"
               onClick={() => setCommandPaletteOpen(true)}
               className="relative w-full flex items-center justify-between pl-9 pr-3.5 py-1.5 text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-[8px] text-slate-400 transition-colors text-left cursor-pointer"
@@ -254,6 +329,11 @@ export const AdminLayout = () => {
               exit={{ opacity: 0, scale: 0.95, y: -10 }}
               transition={{ duration: 0.15 }}
               className="relative w-full max-w-xl bg-white rounded-card shadow-2xl border border-slate-200 overflow-hidden z-10"
+              ref={searchDialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Global Search"
+              onKeyDown={handlePaletteDialogKeyDown}
             >
               {/* Search Bar in Modal */}
               <div className="relative border-b border-slate-100 flex items-center px-4 py-3.5">
@@ -262,6 +342,12 @@ export const AdminLayout = () => {
                   ref={searchInputRef}
                   type="text"
                   placeholder="Type a candidate name, #SHS ID, or page..."
+                  aria-label="Search candidates and pages"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={commandPaletteOpen}
+                  aria-controls="global-search-results"
+                  aria-activedescendant={filteredPaletteItems.length > 0 ? `global-search-option-${selectedIndex}` : undefined}
                   value={paletteQuery}
                   onChange={(e) => {
                     setPaletteQuery(e.target.value);
@@ -280,41 +366,51 @@ export const AdminLayout = () => {
               </div>
 
               {/* Items List */}
-              <div className="max-h-80 overflow-y-auto p-2 space-y-1">
+              <div id="global-search-results" className="max-h-80 overflow-y-auto p-2 space-y-1">
                 {filteredPaletteItems.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-400">
-                    No matching candidate, page, or quick action found.
+                  <div role="status" className="py-8 text-center text-xs text-slate-400">
+                    No matching candidate or page found.
                   </div>
                 ) : (
-                  filteredPaletteItems.map((item, idx) => {
-                    const Icon = iconMap[item.iconName] || item.icon || LayoutDashboard;
-                    const isSelected = selectedIndex === idx;
-                    return (
-                      <div
-                        key={idx}
-                        onClick={() => handleExecutePaletteItem(item)}
-                        onMouseEnter={() => setSelectedIndex(idx)}
-                        className={`flex items-center justify-between px-3 py-2.5 rounded-[8px] text-xs cursor-pointer transition-colors ${
-                          isSelected ? 'bg-blue-50 text-brand-primary font-medium' : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${
-                              isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'
-                            }`}
-                          >
-                            <Icon className="w-3.5 h-3.5" />
+                  <div role="listbox" aria-label="Search results">
+                    {filteredPaletteItems.map((item, idx) => {
+                      const Icon = iconMap[item.iconName] || item.icon || LayoutDashboard;
+                      const isSelected = selectedIndex === idx;
+                      const resultKey = item.resultKey || `${item.type}:${item.path}`;
+                      return (
+                        <div
+                          key={resultKey}
+                          id={`global-search-option-${idx}`}
+                          role="option"
+                          aria-selected={isSelected}
+                          ref={(element) => {
+                            if (element) paletteResultRefs.current.set(idx, element);
+                            else paletteResultRefs.current.delete(idx);
+                          }}
+                          onClick={() => handleExecutePaletteItem(item)}
+                          onMouseEnter={() => setSelectedIndex(idx)}
+                          className={`flex items-center justify-between px-3 py-2.5 rounded-[8px] text-xs cursor-pointer transition-colors ${
+                            isSelected ? 'bg-blue-50 text-brand-primary font-medium' : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${
+                                isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'
+                              }`}
+                            >
+                              <Icon className="w-3.5 h-3.5" />
+                            </div>
+                            <span>{item.title}</span>
                           </div>
-                          <span>{item.title}</span>
-                        </div>
 
-                        <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-500 font-semibold">
-                          {item.type}
-                        </span>
-                      </div>
-                    );
-                  })
+                          <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-500 font-semibold">
+                            {item.type}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
 
@@ -327,6 +423,24 @@ export const AdminLayout = () => {
           </div>
         )}
       </AnimatePresence>
+
+      <Modal
+        isOpen={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        title="Confirm Sign Out"
+        maxWidth="max-w-xs"
+        className="[&>div:first-child]:!p-5 [&>div:first-child]:items-center [&>div:last-child]:!p-5"
+      >
+        <p className="text-sm text-slate-600">Are you sure you want to sign out?</p>
+        <div className="flex justify-end gap-4 mt-5">
+          <Button type="button" variant="secondary" onClick={() => setLogoutConfirmOpen(false)}>
+            Cancel
+          </Button>
+          <Button type="button" variant="primary" onClick={handleLogout}>
+            Confirm Sign Out
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 };

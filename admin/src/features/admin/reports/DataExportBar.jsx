@@ -9,7 +9,8 @@ export const DataExportBar = ({
   title = 'Export Admission & Enquiry Records',
 }) => {
   const handleExportCSV = () => {
-    exportToCSV(data, filename);
+    const exportData = typeof data === 'function' ? data() : data;
+    exportToCSV(exportData, filename);
   };
 
   return (

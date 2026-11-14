@@ -1,6 +1,7 @@
 import React from 'react';
 import ApplicationsTable from '../../features/admin/applications-manager/ApplicationsTable';
 import DataExportBar from '../../features/admin/reports/DataExportBar';
+import { adminStorageService } from '../../features/admin/services/adminStorageService';
 
 export const AdminAdmissionsPage = () => {
   return (
@@ -18,6 +19,7 @@ export const AdminAdmissionsPage = () => {
 
       {/* Export Bar */}
       <DataExportBar
+        data={() => adminStorageService.getApplications()}
         title="Export All 2026-27 Candidates"
         filename="siddhant_admissions_2026.csv"
       />

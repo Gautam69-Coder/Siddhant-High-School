@@ -43,10 +43,9 @@ const adminUserSchema = new mongoose.Schema(
   }
 );
 
-adminUserSchema.pre("save", async function (next) {
-  if (!this.isModified("password_hash")) return next();
+adminUserSchema.pre("save", async function () {
+  if (!this.isModified("password_hash")) return;
   this.password_hash = await bcrypt.hash(this.password_hash, 10);
-  next();
 });
 
 adminUserSchema.methods.isPasswordCorrect = async function (password) {

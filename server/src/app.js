@@ -28,6 +28,10 @@ app.get("/api/v1/health", (req, res) => {
   );
 });
 
+// Mount API v1 Routes
+const rootRouter = require("./routes");
+app.use("/api/v1", rootRouter);
+
 // 404 Not Found Handler
 app.use((req, res, next) => {
   next(new ApiError(404, `Route not found: ${req.originalUrl}`));

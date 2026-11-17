@@ -19,7 +19,13 @@ const ADMISSION_STATUS = {
 
 const GENDERS = ["Male", "Female", "Non-Binary"];
 
-const ENQUIRY_CATEGORIES = ["Admissions", "Transport", "Fees", "Campus Tour"];
+const ENQUIRY_CATEGORIES = [
+  "Admission process",
+  "School visit",
+  "Academics",
+  "Facilities",
+  "General information",
+];
 
 const ENQUIRY_STATUS = {
   PENDING: "pending",

@@ -3275,6 +3275,20 @@ main > section { animation:public-page-enter 240ms ease-out both; }
   object-fit:cover;
 }
 .sports-hero-image figcaption { padding:7px 2px 0; color:var(--text-secondary); font-size:11px; }
+.sports-hero-pair {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.sports-hero-pair .representative-image,.sports-hero-pair .image-fallback {
+  display:block;
+  width:100%;
+  height:auto;
+  aspect-ratio:4 / 3;
+  min-height:0;
+  border-radius:var(--radius-card);
+  object-fit:cover;
+}
 .sports-detail-grid article:nth-child(3n + 2) { background:transparent; }
 .sports-detail-grid article:hover,.sports-detail-grid article:focus-visible {
   background:var(--bg-subtle);
@@ -3301,6 +3315,7 @@ main > section { animation:public-page-enter 240ms ease-out both; }
 @media (max-width:760px) {
   .sports-intro-layout { grid-template-columns:1fr; gap:18px; }
   .sports-hero-image .representative-image,.sports-hero-image .image-fallback { height:clamp(210px,58vw,300px); }
+  .sports-hero-pair .representative-image,.sports-hero-pair .image-fallback { height:auto; }
   .achievement-visuals { grid-template-columns:minmax(0,1.1fr) minmax(150px,.9fr); grid-template-rows:180px; }
   .achievement-visuals .achievement-image-main img,.achievement-visuals .achievement-image-main .image-fallback { height:180px; }
 }

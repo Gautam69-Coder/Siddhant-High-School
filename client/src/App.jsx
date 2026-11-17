@@ -2,10 +2,46 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import logo from "./assets/siddhant-school-logo.jpg";
 import homepageSchoolBuilding from "./assets/homepage-school-building.jpeg";
 import newsClassroom from "./assets/news-classroom.jpeg";
+import academicsClassroom from "./assets/academics-curriculum-classroom.jpeg";
+import facultyGroup from "./assets/faculty-group.jpeg";
+import homepageLearning from "./assets/homepage-learning-with-purpose.jpeg";
+import homepageAchievement from "./assets/homepage-student-achievements.jpeg";
+import homepageSportsCultural from "./assets/homepage-sports-cultural.jpeg";
+import facilityArts from "./assets/infrastructure-arts-creative-spaces.jpeg";
+import facilityLibrary from "./assets/infrastructure-library-reading.jpeg";
+import facilitySports from "./assets/infrastructure-sports-recreation.jpeg";
+import campusLearningSpaces from "./assets/campus-learning-spaces.jpeg";
+import communityMoments from "./assets/community-moments.jpeg";
+import principalMessage from "./assets/principal-office.jpeg";
+import roboticsInnovation from "./assets/robotics-innovation-hero.jpeg";
+import sportsCulturalDance from "./assets/sports-cultural-dance.jpeg";
+import studentClubs from "./assets/student-activities-clubs.jpeg";
+import studentCommunity from "./assets/student-activities-community-events.jpeg";
+import studentLeadership from "./assets/student-activities-leadership.jpeg";
+import studentPerformingArts from "./assets/student-activities-performing-arts.jpeg";
+import studentSportsFitness from "./assets/student-activities-sports-fitness.jpeg";
 import NewsTicker from "./components/NewsTicker";
 
 const images = {
   hero: homepageSchoolBuilding,
+  learningWithPurpose: homepageLearning,
+  homepageAchievement,
+  homepageSportsCultural,
+  campusLearningSpaces,
+  communityMoments,
+  academicsClassroom,
+  facultyGroup,
+  facilityArts,
+  facilityLibrary,
+  facilitySports,
+  principalMessage,
+  roboticsInnovation,
+  sportsCulturalDance,
+  studentClubs,
+  studentCommunity,
+  studentLeadership,
+  studentPerformingArts,
+  studentSportsFitness,
   classroom:
     "https://images.unsplash.com/photo-1709290749293-c6152a187b14?auto=format&fit=crop&w=1400&q=85",
   campus:
@@ -65,7 +101,7 @@ const galleryItems = [
   [images.sportsDetail, "Sport and teamwork", "Sports"],
   [images.arts, "Creative expression", "Cultural Activities"],
   [images.robotics, "Innovation in action", "Innovation"],
-  [images.schoolEvent, "Community moments", "Student Activities"],
+  [images.communityMoments, "Community moments", "Student Activities"],
   [images.library, "Reading and discovery", "Academics"],
   [images.science, "Scientific exploration", "Innovation"],
 ];
@@ -153,12 +189,12 @@ function RepresentativeImage({ src, alt, className = "" }) {
 const pages = [
   ["Home", "/"],
   ["About Us", "/about"],
-  ["Vision & Values", "/vision-mission"],
+  ["Vision & Mission", "/vision-mission"],
   ["Principal's Message", "/principal-message"],
   ["Management & Faculty", "/management-faculty"],
-  ["Academics", "/academics"],
-  ["Campus", "/infrastructure"],
-  ["Activities", "/student-activities"],
+  ["Academics & Curriculum", "/academics"],
+  ["Infrastructure & Facilities", "/infrastructure"],
+  ["Student Activities", "/student-activities"],
   ["Sports & Cultural Activities", "/sports-cultural"],
   ["Student Achievements", "/achievements"],
   ["Robotics & Innovation", "/robotics-innovation"],
@@ -942,9 +978,9 @@ export default function App() {
     "/vision-mission",
     "/academics",
     "/infrastructure",
-    "/student-activities",
     "/gallery",
     "/admissions",
+    "/contact",
   ]);
   const primaryPages = pages.filter(([, path]) => primaryPaths.has(path));
   const morePages = pages.filter(([, path]) => path !== "/" && !primaryPaths.has(path));
@@ -1064,13 +1100,13 @@ export default function App() {
             </p>
             <div className="hero-actions">
               <RouteLink className="button primary" to="/about">
-                About Our School <Arrow />
+                About Us <Arrow />
               </RouteLink>
               <button
                 className="button outline-blue"
                 onClick={() => openAdmissions("application")}
               >
-                Explore Admissions <Arrow />
+                Admissions <Arrow />
               </button>
             </div>
           </div>
@@ -1084,7 +1120,7 @@ export default function App() {
         {page === "/" && (
           <>
             <section className="home-welcome section">
-              <div className="home-welcome-image"><img src={images.classroom} alt="Representative classroom learning scene" /></div>
+              <div className="home-welcome-image"><img src={images.learningWithPurpose} alt="Teacher guiding students through a creative learning activity" /></div>
               <div className="home-welcome-copy">
                 <p className="eyebrow">Welcome to Siddhant High School</p>
                 <h2>Learning with purpose, <em>growing with confidence.</em></h2>
@@ -1096,15 +1132,15 @@ export default function App() {
             <section className="home-learning section-blue">
               <div className="section-heading centered light-heading"><p className="eyebrow light">Our approach to learning</p><h2>Curiosity for today, <em>confidence for tomorrow.</em></h2><p>Four connected learning pillars offer a concise view of the school's illustrative educational approach.</p></div>
               <div className="academic-grid">{learningPillars.map(([n, icon, title, text]) => <article className="academic-card" key={title}><span className="card-number">{n}</span><Icon name={icon} /><h3>{title}</h3><p>{text}</p></article>)}</div>
-              <div className="centered-action"><RouteLink className="button white" to="/academics">Explore Academics <Arrow /></RouteLink></div>
+              <div className="centered-action"><RouteLink className="button white" to="/academics">Academics &amp; Curriculum <Arrow /></RouteLink></div>
             </section>
             <section className="home-beyond section">
               <div className="section-heading split-heading"><div><p className="eyebrow">Beyond academics</p><h2>Room to explore, <em>express and connect.</em></h2></div><p>Student development can grow through shared interests, physical activity and cultural expression. These illustrative previews link to the dedicated pages.</p></div>
-              <div className="home-feature-grid"><RouteLink to="/student-activities"><img src={images.community} alt="Representative student group activity"/><span>Student Activities</span></RouteLink><RouteLink to="/sports-cultural"><img src={images.sports} alt="Representative sports activity"/><span>Sports &amp; Cultural Activities</span></RouteLink><RouteLink to="/sports-cultural"><img src={images.culture} alt="Representative cultural activity"/><span>Creative &amp; Cultural Expression</span></RouteLink></div>
+              <div className="home-feature-grid"><RouteLink to="/student-activities"><img src={images.community} alt="Representative student group activity"/><span>Student Activities</span></RouteLink><RouteLink to="/sports-cultural"><img src={images.homepageSportsCultural} alt="Students taking part in sports and cultural performances"/><span>Sports &amp; Cultural Activities</span></RouteLink><RouteLink to="/achievements"><img src={images.homepageAchievement} alt="Students receiving achievement certificates"/><span>Student Achievements</span></RouteLink></div>
               <RouteLink className="arrow-link" to="/student-activities">Explore Student Activities <Arrow /></RouteLink>
             </section>
-            <section className="home-campus"><img src={images.campus} alt="Representative campus courtyard image"/><div><p className="eyebrow light">Discover our campus</p><h2>A welcoming setting for <em>learning and discovery.</em></h2><p>Explore examples of spaces that can support focused study, movement and creative work. Images and facility descriptions are representative and await school confirmation.</p><RouteLink className="button white" to="/infrastructure">Explore Our Campus <Arrow /></RouteLink></div></section>
-            <section className="home-updates section"><div className="section-heading split-heading"><div><p className="eyebrow">Stay connected</p><h2>Latest news &amp; <em>upcoming events.</em></h2></div><p>Sample previews demonstrate where confirmed announcements and dates will appear.</p></div><div className="home-update-grid"><div><h3>News &amp; Announcements <span>Sample content</span></h3>{sampleNews.slice(0, 2).map((item) => <article key={item.id}><small>{item.date} · {item.category}</small><h4>{item.title}</h4><p>{item.summary}</p></article>)}<RouteLink className="arrow-link" to="/news">View All News <Arrow /></RouteLink></div><div><h3>Upcoming Events <span>Sample events</span></h3>{sampleEvents.filter((event) => new Date(`${event.date}T00:00:00`) >= new Date("2026-11-15T00:00:00")).slice(0, 2).map((event) => <article key={event.date}><small>{event.date} · {event.category}</small><h4>{event.title}</h4><p>{event.description}</p></article>)}<RouteLink className="arrow-link" to="/events">View Calendar <Arrow /></RouteLink></div></div></section>
+            <section className="home-campus"><img src={images.campus} alt="Representative campus courtyard image"/><div><p className="eyebrow light">Discover our campus</p><h2>A welcoming setting for <em>learning and discovery.</em></h2><p>Explore examples of spaces that can support focused study, movement and creative work. Images and facility descriptions are representative and await school confirmation.</p><RouteLink className="button white" to="/infrastructure">Infrastructure &amp; Facilities <Arrow /></RouteLink></div></section>
+            <section className="home-updates section"><div className="section-heading split-heading"><div><p className="eyebrow">Stay connected</p><h2>Latest news &amp; <em>upcoming events.</em></h2></div><p>Sample previews demonstrate where confirmed announcements and dates will appear.</p></div><div className="home-update-grid"><div><h3>News &amp; Announcements <span>Sample content</span></h3>{sampleNews.slice(0, 2).map((item) => <article key={item.id}><small>{item.date} · {item.category}</small><h4>{item.title}</h4><p>{item.summary}</p></article>)}<RouteLink className="arrow-link" to="/news">News &amp; Announcements <Arrow /></RouteLink></div><div><h3>Upcoming Events <span>Sample events</span></h3>{sampleEvents.filter((event) => new Date(`${event.date}T00:00:00`) >= new Date("2026-11-15T00:00:00")).slice(0, 2).map((event) => <article key={event.date}><small>{event.date} · {event.category}</small><h4>{event.title}</h4><p>{event.description}</p></article>)}<RouteLink className="arrow-link" to="/events">Events &amp; Calendar <Arrow /></RouteLink></div></div></section>
             <section className="home-admissions"><p className="eyebrow light">Admissions &amp; enquiries</p><h2>Take the next step in <em>your school journey.</em></h2><p>Use the frontend demonstration forms to explore an application or send an enquiry. No information is transmitted or stored.</p><div><button className="button white" onClick={() => openAdmissions("application")}>Apply for Admission <Arrow /></button><button className="button outline-light" onClick={() => openAdmissions("enquiry")}>Send an Enquiry <Arrow /></button></div></section>
           </>
         )}
@@ -1123,7 +1159,7 @@ export default function App() {
             </div>
           </div>
           <div className="welcome-copy">
-            <p className="eyebrow">A place to become</p>
+            <p className="eyebrow">About Us</p>
             <h1 className="page-title">
               Education that sees
               <br />
@@ -1140,7 +1176,7 @@ export default function App() {
               voice.
             </p>
             <RouteLink className="arrow-link" to="/academics">
-              Our approach to learning <Arrow />
+              Academics &amp; Curriculum <Arrow />
             </RouteLink>
           </div>
         </section>
@@ -1157,7 +1193,7 @@ export default function App() {
         {page === "/vision-mission" && (
         <section className="vision-values" id="vision">
           <p className="sample-note vision-sample-note">Illustrative vision, mission and values wording pending review and approval by the school.</p>
-          <header className="vision-page-heading"><p className="eyebrow">Vision &amp; Values</p><h1>A thoughtful direction for learning and growth.</h1><p>Learning shaped by curiosity, character and care for each learner's potential.</p></header>
+          <header className="vision-page-heading"><p className="eyebrow">Vision &amp; Mission</p><h1>A thoughtful direction for learning and growth.</h1><p>Learning shaped by curiosity, character and care for each learner's potential.</p></header>
           <div className="vision-panel">
             <p className="eyebrow light">Our direction</p>
             <div className="vision-block">
@@ -1212,7 +1248,7 @@ export default function App() {
               ))}
             </div>
           </div>
-          <div className="vision-next-step"><p>See how these ideas inform the learning approach.</p><RouteLink className="arrow-link" to="/academics">Explore Academics <Arrow /></RouteLink></div>
+          <div className="vision-next-step"><p>See how these ideas inform the learning approach.</p><RouteLink className="arrow-link" to="/academics">Explore Academics &amp; Curriculum <Arrow /></RouteLink></div>
         </section>
 
         )}
@@ -1220,7 +1256,7 @@ export default function App() {
         {page === "/academics" && (
         <section className="academics section" id="academics">
           <div className="section-heading centered academics-heading">
-            <p className="eyebrow">Learning at Siddhant</p>
+            <p className="eyebrow">Academics &amp; Curriculum</p>
             <h1 className="page-title">
               A foundation for <em>every future.</em>
             </h1>
@@ -1245,7 +1281,7 @@ export default function App() {
           <section className="academics-detail" aria-labelledby="academic-practice-title">
             <div className="academics-detail-heading"><p className="sample-note">Illustrative approach; no board, syllabus, class structure or examination system is specified.</p><h2 id="academic-practice-title">How learning is <em>supported.</em></h2><p>Teaching, feedback and wider experiences each play a part in helping learners make progress.</p></div>
             <div className="academic-practice">
-              <article className="academic-practice-feature"><figure><img src={images.classroom} alt="Representative classroom learning environment"/><figcaption>Illustrative classroom image</figcaption></figure><div><Icon name="book"/><h3>Teaching &amp; learning</h3><p>A balanced approach may combine clear explanation, guided practice, discussion, inquiry and opportunities to create.</p></div></article>
+              <article className="academic-practice-feature"><figure><img src={images.academicsClassroom} alt="Teacher leading a classroom lesson"/><figcaption>Illustrative classroom image</figcaption></figure><div><Icon name="book"/><h3>Teaching &amp; learning</h3><p>A balanced approach may combine clear explanation, guided practice, discussion, inquiry and opportunities to create.</p></div></article>
               <div className="academic-practice-list">{[["Progress & feedback", "light", "Regular feedback and reflection can help learners understand progress and identify next steps; assessment arrangements await official details."], ["Academic support", "globe", "Responsive guidance and communication with families can help address different learning needs."], ["Co-curricular learning", "palette", "Learning can extend through projects, reading, arts, sports and shared activities beyond lessons."]].map(([title, icon, text], index) => <article key={title}><span>0{index + 2}</span><Icon name={icon}/><div><h3>{title}</h3><p>{text}</p></div></article>)}</div>
             </div>
           </section>
@@ -1257,7 +1293,7 @@ export default function App() {
         <section className="management section" id="management">
           <div className="section-heading split-heading">
             <div>
-              <p className="eyebrow">Management &amp; faculty</p>
+              <p className="eyebrow">Management &amp; Faculty</p>
               <h1 className="page-title">
                 Guided by <em>care and purpose.</em>
               </h1>
@@ -1268,7 +1304,7 @@ export default function App() {
             </p>
           </div>
           <div className="management-showcase">
-          <figure className="management-visual"><img src={images.community} alt="Representative collaborative learning scene, not a school staff portrait"/><figcaption>Representative learning image &middot; no staff identities shown</figcaption></figure>
+          <figure className="management-visual"><img src={images.facultyGroup} alt="Group of faculty members gathered together"/><figcaption>Faculty group photograph</figcaption></figure>
           <div className="management-grid">
             {[
               [
@@ -1317,7 +1353,7 @@ export default function App() {
         <section className="facilities section" id="facilities">
           <div className="section-heading split-heading">
             <div>
-              <p className="eyebrow">Spaces that inspire</p>
+              <p className="eyebrow">Infrastructure &amp; Facilities</p>
               <h1 className="page-title">
                 Designed for <em>discovery.</em>
               </h1>
@@ -1330,12 +1366,12 @@ export default function App() {
           <p className="sample-note">The descriptions below and the photographs are representative examples only. They do not confirm that any specific facility is available at Siddhant High School.</p>
           <div className="facility-showcase">
             {[
-              [images.campusDetail, "Campus & Learning Spaces", "Representative campus image", "Welcoming settings can support focused study, collaboration and the everyday rhythm of school life."],
+              [images.campusLearningSpaces, "Campus & Learning Spaces", "Siddhant High School campus building", "Welcoming settings can support focused study, collaboration and the everyday rhythm of school life."],
               [images.science, "Science & Discovery", "Representative science image", "Practical learning spaces may help students observe, investigate questions and test ideas."],
               [images.computing, "Digital Learning & Technology", "Representative digital learning image", "Age-appropriate digital resources can help learners research, create and develop technology skills."],
-              [images.library, "Library & Reading Resources", "Representative library image", "A reading environment can encourage independent learning, communication and a lasting interest in books."],
-              [images.sportsDetail, "Sports & Recreation", "Representative sports image", "Spaces for movement can support physical wellbeing, participation and teamwork."],
-              [images.arts, "Arts & Creative Spaces", "Representative arts image", "Creative environments can make room for visual expression, music, performance and making."],
+              [images.facilityLibrary, "Library & Reading Resources", "Students reading together in a school library", "A reading environment can encourage independent learning, communication and a lasting interest in books."],
+              [images.facilitySports, "Sports & Recreation", "Students taking part in an outdoor school race", "Spaces for movement can support physical wellbeing, participation and teamwork."],
+              [images.facilityArts, "Arts & Creative Spaces", "Students working together on art", "Creative environments can make room for visual expression, music, performance and making."],
             ].map(([src, title, alt, description], index) => (
               <article key={title}>
                 <figure><img src={src} alt={alt} /><figcaption>Illustrative image &middot; facility pending confirmation</figcaption></figure>
@@ -1367,8 +1403,11 @@ export default function App() {
             </RouteLink>
           </div>
           <figure className="sports-hero-image">
-            <RepresentativeImage src={images.sportsDetail} alt="Representative school sports activity on a football field; not a Siddhant High School event" />
-            <figcaption>Representative sports imagery</figcaption>
+            <div className="sports-hero-pair">
+              <RepresentativeImage src={images.sportsDetail} alt="Representative school sports activity on a football field; not a Siddhant High School event" />
+              <RepresentativeImage src={images.sportsCulturalDance} alt="Students performing a cultural dance on stage" />
+            </div>
+            <figcaption>Representative sports and cultural activity imagery</figcaption>
           </figure>
           </div>
           <p className="sample-note sports-sample-note">Activity examples and photographs are representative. They do not confirm a specific Siddhant High School programme or event.</p>
@@ -1380,7 +1419,7 @@ export default function App() {
         {page === "/student-activities" && (
         <section className="activities-detail section">
           <div className="section-heading centered">
-            <p className="eyebrow">Student activities</p>
+            <p className="eyebrow">Student Activities</p>
             <h1 className="page-title">
               Experiences that build <em>confidence.</em>
             </h1>
@@ -1391,11 +1430,11 @@ export default function App() {
           </div>
           <div className="activity-cards">
             {[
-              ["trophy", "Sports & Fitness", "Team games and movement can build coordination, persistence and respect for others. Specific sports offered by the school await confirmation.", images.sportsDetail, "Illustrative football activity"],
-              ["palette", "Visual & Performing Arts", "Creative practice gives learners ways to develop ideas, share their work and express themselves through different forms.", images.culture, "Illustrative school stage performance"],
-              ["book", "Clubs & Interests", "Interest-led groups can give students time to explore a subject, exchange ideas and learn alongside others.", images.library, "Illustrative reading and interest group"],
-              ["globe", "Community Events", "Shared school occasions can help students and families connect and contribute to a welcoming community.", images.community, "Illustrative group participation"],
-              ["light", "Leadership", "Opportunities to listen, take responsibility and support a group can help students practise leadership.", images.classroom, "Illustrative collaborative classroom activity"],
+              ["trophy", "Sports & Fitness", "Team games and movement can build coordination, persistence and respect for others. Specific sports offered by the school await confirmation.", images.studentSportsFitness, "Students taking part in a group fitness activity"],
+              ["palette", "Visual & Performing Arts", "Creative practice gives learners ways to develop ideas, share their work and express themselves through different forms.", images.studentPerformingArts, "Students performing on stage"],
+              ["book", "Clubs & Interests", "Interest-led groups can give students time to explore a subject, exchange ideas and learn alongside others.", images.studentClubs, "Students reading together in a library"],
+              ["globe", "Community Events", "Shared school occasions can help students and families connect and contribute to a welcoming community.", images.studentCommunity, "Students sharing a creative project"],
+              ["light", "Leadership", "Opportunities to listen, take responsibility and support a group can help students practise leadership.", images.studentLeadership, "Students taking part in a school leadership ceremony"],
               ["flask", "Innovation", "Making and design challenges encourage learners to test possibilities, learn from setbacks and improve an idea.", images.robotics, "Illustrative robotics project"],
             ].map(([icon, title, text, src, alt], index) => (
               <article key={title}>
@@ -1413,11 +1452,11 @@ export default function App() {
         {page === "/robotics-innovation" && (
         <section className="innovation section">
           <div className="innovation-image">
-            <RepresentativeImage src={images.robotics} alt="Illustrative robotics technology photograph; not a verified Siddhant programme" />
+            <RepresentativeImage src={images.roboticsInnovation} alt="Teacher and students exploring an educational robot" />
             <span className="vertical-label">Ideas into action</span>
           </div>
           <div className="innovation-copy">
-            <p className="eyebrow">Robotics &amp; innovation</p>
+            <p className="eyebrow">Robotics &amp; Innovation</p>
             <h1 className="page-title">
               Learning to make,
               <br />
@@ -1484,7 +1523,7 @@ export default function App() {
         {page === "/achievements" && (
         <section className="achievements">
           <header className="achievement-title">
-            <p className="eyebrow">CELEBRATING ACHIEVEMENT</p>
+            <p className="eyebrow">Student Achievements</p>
             <h1 className="page-title">Celebrating every milestone.</h1>
             <p className="achievement-intro">Achievement is shaped by curiosity, dedication, creativity, participation and the determination to keep growing.</p>
           </header>
@@ -1549,7 +1588,7 @@ export default function App() {
         <section className="admissions-section" id="admissions">
           <div className="admissions-intro">
             <div>
-              <p className="eyebrow light">Admissions &amp; enquiry</p>
+              <p className="eyebrow light">Admissions</p>
               <h1 className="page-title">
                 Begin a meaningful
                 <br />
@@ -1614,7 +1653,7 @@ export default function App() {
 
         {page === "/principal-message" && (
           <section className="principal-page section">
-            <figure className="principal-portrait"><img src={images.educator} alt="Illustrative stock photograph of an educator; not Siddhant High School's principal"/><figcaption>Illustrative educator portrait, not the school's principal. Official image pending school approval.</figcaption></figure>
+            <figure className="principal-portrait"><img src={images.principalMessage} alt="Male school principal seated at his office desk"/><figcaption>Principal speaking at a school event</figcaption></figure>
             <article><p className="eyebrow">Principal's Message</p><h1>A welcoming message to every learner and family.</h1><p className="sample-note">Illustrative message pending review and approval by the school. The accompanying educator portrait is representative and does not depict the principal.</p><blockquote className="principal-quote">“Every learner should feel encouraged to ask questions, discover strengths and treat others with respect.”</blockquote><p className="lead">Dear Students and Families,</p><p>Welcome to Siddhant High School. Education is a shared journey built on curiosity, care and the confidence to keep learning. We hope every student finds encouragement to ask questions, develop their strengths and treat others with respect.</p><p>Our school community can make each day meaningful when students, families and educators work together. We look forward to supporting young people as they learn, grow and discover ways to contribute with purpose.</p><p>With warm wishes,</p><p className="principal-signature"><strong>Principal</strong><br/>Siddhant High School</p></article>
           </section>
         )}

@@ -11,4 +11,4 @@ router.use("/auth", authRoutes);
 router.use("/admissions", admissionRoutes);
 router.use("/enquiries", enquiryRoutes);
 
-module.exports = route
+module.exports = router;

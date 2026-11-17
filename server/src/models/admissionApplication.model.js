@@ -64,6 +64,20 @@ const admissionApplicationSchema = new mongoose.Schema(
       required: [true, "Pincode is required"],
       trim: true,
     },
+    documents: {
+  student_photo: {
+    type: String,
+    default: null,
+  },
+  birth_certificate: {
+    type: String,
+    default: null,
+  },
+  previous_school_report: {
+    type: String,
+    default: null,
+  },
+},
     status: {
       type: String,
       enum: Object.values(ADMISSION_STATUS),

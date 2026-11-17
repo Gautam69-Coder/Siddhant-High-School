@@ -1,13 +1,33 @@
-
 const mongoose = require("mongoose");
 const crypto = require("crypto");
 const AdmissionApplication = require("../models/admissionApplication.model");
+const cloudinary = require("../config/cloudinary");
 
 // Generate application number
 const generateApplicationNumber = () => {
   const year = new Date().getFullYear();
   const randomCode = crypto.randomBytes(4).toString("hex").toUpperCase();
   return `SHS-${year}-${randomCode}`;
+};
+
+const uploadToCloudinary = (file) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: "siddhant-high-school/admissions",
+        resource_type: "auto",
+      },
+      (error, result) => {
+        if (error) {
+          return reject(error);
+        }
+
+        resolve(result.secure_url);
+      }
+    );
+
+    stream.end(file.buffer);
+  });
 };
 
 // POST: Create admission application
@@ -26,6 +46,20 @@ const createAdmission = async (req, res, next) => {
       city,
       pincode,
     } = req.body;
+    
+    const files = req.files || {};
+
+    const studentPhoto = files.student_photo?.[0]
+      ? await uploadToCloudinary(files.student_photo[0])
+      : null;
+
+    const birthCertificate = files.birth_certificate?.[0]
+      ? await uploadToCloudinary(files.birth_certificate[0])
+      : null;
+
+    const previousSchoolReport = files.previous_school_report?.[0]
+      ? await uploadToCloudinary(files.previous_school_report[0])
+      : null;
 
     const application = await AdmissionApplication.create({
       application_number: generateApplicationNumber(),
@@ -40,6 +74,11 @@ const createAdmission = async (req, res, next) => {
       address,
       city,
       pincode,
+      documents: {
+        student_photo: studentPhoto,
+        birth_certificate: birthCertificate,
+        previous_school_report: previousSchoolReport,
+      },
     });
 
     return res.status(201).json({

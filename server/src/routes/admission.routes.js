@@ -1,4 +1,4 @@
-
+const upload = require("../middlewares/multer.middleware");
 const { Router } = require("express");
 
 const {
@@ -12,7 +12,15 @@ const {
 const router = Router();
 
 // Submit a new admission
-router.post("/", createAdmission);
+router.post(
+  "/",
+  upload.fields([
+    { name: "student_photo", maxCount: 1 },
+    { name: "birth_certificate", maxCount: 1 },
+    { name: "previous_school_report", maxCount: 1 },
+  ]),
+  createAdmission
+);
 
 // Get all admission applications
 router.get("/", getAllAdmissions);

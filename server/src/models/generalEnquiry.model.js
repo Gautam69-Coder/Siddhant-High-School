@@ -31,7 +31,8 @@ const generalEnquirySchema = new mongoose.Schema(
     },
     message: {
       type: String,
-      required: [true, "Message is required"],
+      trim: true,
+      default: null,
     },
     status: {
       type: String,

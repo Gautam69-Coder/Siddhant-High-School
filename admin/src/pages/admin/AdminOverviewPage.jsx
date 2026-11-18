@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import GlassCard from '../../components/ui/GlassCard';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { Link } from 'react-router-dom';
+import admissionService from '../../services/admissionService';
+import enquiryService from '../../services/enquiryService';
 import {
   GraduationCap,
   MessageSquare,
@@ -19,7 +21,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import {
-  adminKpis,
+  adminKpis as defaultKpis,
   funnelStages,
   gradeDistribution,
   weeklyTrends,
@@ -34,6 +36,74 @@ const iconMap = {
 };
 
 export const AdminOverviewPage = () => {
+  const [kpis, setKpis] = useState(defaultKpis);
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.allSettled([
+      admissionService.getAllAdmissions(),
+      enquiryService.getAllEnquiries(),
+    ]).then(([admissionsRes, enquiriesRes]) => {
+      if (!isMounted) return;
+
+      const admissions = admissionsRes.status === 'fulfilled' ? admissionsRes.value : [];
+      const enquiries = enquiriesRes.status === 'fulfilled' ? enquiriesRes.value : [];
+
+      if (admissions.length > 0 || enquiries.length > 0) {
+        const totalApps = admissions.length;
+        const pendingApps = admissions.filter(
+          (a) => a.status === 'pending' || a.status === 'under_review'
+        ).length;
+        const approvedApps = admissions.filter((a) => a.status === 'approved').length;
+        const totalEnquiries = enquiries.length;
+
+        setKpis([
+          {
+            id: 'kpi-1',
+            label: 'Total Intake Candidates',
+            value: String(totalApps),
+            change: '+Live from DB',
+            trend: 'positive',
+            iconName: 'GraduationCap',
+            color: 'text-brand-primary',
+            bg: 'bg-blue-50',
+          },
+          {
+            id: 'kpi-2',
+            label: 'Pending File Reviews',
+            value: String(pendingApps),
+            change: 'Action queue',
+            trend: 'attention',
+            iconName: 'Clock',
+            color: 'text-amber-600',
+            bg: 'bg-amber-50',
+          },
+          {
+            id: 'kpi-3',
+            label: 'Verified & Approved',
+            value: String(approvedApps),
+            change: 'Confirmed offers',
+            trend: 'positive',
+            iconName: 'CheckCircle',
+            color: 'text-emerald-600',
+            bg: 'bg-emerald-50',
+          },
+          {
+            id: 'kpi-4',
+            label: 'Parent Inquiries Received',
+            value: String(totalEnquiries),
+            change: 'All departments',
+            trend: 'neutral',
+            iconName: 'MessageSquare',
+            color: 'text-purple-600',
+            bg: 'bg-purple-50',
+          },
+        ]);
+      }
+    });
+
+    return () => { isMounted = false; };
+  }, []);
   return (
     <div className="space-y-6">
       {/* Top Header */}
@@ -58,7 +128,7 @@ export const AdminOverviewPage = () => {
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {adminKpis.map((kpi, idx) => {
+        {kpis.map((kpi, idx) => {
           const Icon = iconMap[kpi.iconName] || GraduationCap;
           return (
             <GlassCard key={kpi.id || idx} className="p-5 border-slate-200">

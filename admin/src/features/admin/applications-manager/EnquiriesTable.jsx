@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import { Mail, Check, MessageSquare, Search } from 'lucide-react';
 import { adminStorageService } from '../services/adminStorageService';
+import enquiryService from '../../../services/enquiryService';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -11,6 +12,28 @@ export const EnquiriesTable = () => {
   const [emailErrorId, setEmailErrorId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+
+  useEffect(() => {
+    let isMounted = true;
+    enquiryService.getAllEnquiries()
+      .then((data) => {
+        if (isMounted) {
+          if (data && data.length > 0) {
+            setEnquiries(data);
+          } else {
+            setEnquiries(adminStorageService.getEnquiries());
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load live enquiries, using stored fallback:', err);
+        if (isMounted) {
+          setEnquiries(adminStorageService.getEnquiries());
+        }
+      });
+
+    return () => { isMounted = false; };
+  }, []);
 
   const saveEnquiries = (updatedEnquiries) => {
     try {
@@ -22,12 +45,22 @@ export const EnquiriesTable = () => {
     }
   };
 
-  const toggleResolved = (id) => {
+  const toggleResolved = async (id) => {
+    const currentEnquiry = enquiries.find((e) => e.id === id);
+    const newUiStatus = currentEnquiry?.status === 'approved' ? 'pending' : 'approved';
+    const backendStatus = newUiStatus === 'approved' ? 'resolved' : 'pending';
+
     const updatedEnquiries = enquiries.map((e) =>
-      e.id === id ? { ...e, status: e.status === 'approved' ? 'pending' : 'approved' } : e
+      e.id === id ? { ...e, status: newUiStatus, rawStatus: backendStatus } : e
     );
-    if (!saveEnquiries(updatedEnquiries)) return;
     setEnquiries(updatedEnquiries);
+    saveEnquiries(updatedEnquiries);
+
+    try {
+      await enquiryService.updateEnquiryStatus(id, backendStatus);
+    } catch (err) {
+      console.warn('Backend update notice for enquiry:', err.message);
+    }
   };
 
   const handleEmailParent = (event, email, id) => {

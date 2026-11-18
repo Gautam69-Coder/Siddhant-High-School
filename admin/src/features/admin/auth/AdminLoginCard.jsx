@@ -5,6 +5,7 @@ import InputField from '../../../components/ui/InputField';
 import Button from '../../../components/ui/Button';
 import GlassCard from '../../../components/ui/GlassCard';
 import { Lock, Mail, ShieldAlert, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import authService from '../../../services/authService';
 
 export const AdminLoginCard = () => {
   const [email, setEmail] = useState('');
@@ -15,7 +16,7 @@ export const AdminLoginCard = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -39,24 +40,34 @@ export const AdminLoginCard = () => {
 
     setLoading(true);
 
-    setTimeout(() => {
-      if (normalizedEmail === 'admin@siddhanthighschool.edu' && password === 'admin123') {
-        const dummyToken = 'shs_demo_jwt_token_super_admin';
-        localStorage.setItem('shs_admin_token', dummyToken);
-        dispatch({
-          type: 'auth/loginSuccess',
-          payload: {
-            token: dummyToken,
-            user: { email: normalizedEmail, role: 'SUPER_ADMIN', name: 'Dr. Katherine Price' },
-          },
-        });
-        navigate('/admin/dashboard');
-      } else {
-        setError('Invalid email or password. Please check your credentials and try again.');
-        setPassword('');
+    try {
+      const response = await authService.login({
+        email: normalizedEmail,
+        password,
+      });
+
+      const token = response.data?.token || response.token;
+      const user = response.data?.user || response.user;
+
+      if (!token) {
+        throw new Error('No authentication token received from server.');
       }
+
+      localStorage.setItem('shs_admin_token', token);
+      dispatch({
+        type: 'auth/loginSuccess',
+        payload: {
+          token,
+          user,
+        },
+      });
+      navigate('/admin/dashboard');
+    } catch (err) {
+      setError(err.message || 'Invalid email or password. Please check your credentials and try again.');
+      setPassword('');
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
   return (

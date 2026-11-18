@@ -17,7 +17,7 @@ const ADMISSION_STATUS = {
   REJECTED: "rejected",
 };
 
-const GENDERS = ["Male", "Female", "Non-Binary"];
+const GENDERS = ["Male", "Female", "Non-Binary", "Prefer not to say"];
 
 const ENQUIRY_CATEGORIES = [
   "Admission process",

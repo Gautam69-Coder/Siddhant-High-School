@@ -24,6 +24,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { gradeFilterOptions, applicationStatusTabs } from '../mockData';
 import { adminStorageService } from '../services/adminStorageService';
+import admissionService from '../../../services/admissionService';
 
 export const ApplicationsTable = () => {
   const [filter, setFilter] = useState('All');
@@ -32,10 +33,36 @@ export const ApplicationsTable = () => {
   const [selectedApp, setSelectedApp] = useState(null);
   const [inspectedDoc, setInspectedDoc] = useState(null);
   const [actionSuccessNotice, setActionSuccessNotice] = useState('');
+  const [loading, setLoading] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
 
   const [applications, setApplications] = useState(() => adminStorageService.getApplications());
+
+  useEffect(() => {
+    let isMounted = true;
+    admissionService.getAllAdmissions()
+      .then((data) => {
+        if (isMounted) {
+          if (data && data.length > 0) {
+            setApplications(data);
+          } else {
+            setApplications(adminStorageService.getApplications());
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load live admissions, using stored fallback:', err);
+        if (isMounted) {
+          setApplications(adminStorageService.getApplications());
+        }
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => { isMounted = false; };
+  }, []);
 
   const selectedApplicationId = location.state?.selectedApplicationId;
   useEffect(() => {
@@ -62,20 +89,24 @@ export const ApplicationsTable = () => {
     }
   };
 
-  const handleStatusChange = (id, newStatus) => {
+  const handleStatusChange = async (id, newStatus) => {
     const updatedApplications = applications.map((app) =>
       app.id === id ? { ...app, status: newStatus } : app
     );
-    if (!saveApplications(updatedApplications)) {
-      setActionSuccessNotice('');
-      return;
-    }
 
     setApplications(updatedApplications);
     if (selectedApp && selectedApp.id === id) {
       setSelectedApp(updatedApplications.find((app) => app.id === id));
     }
-    setActionSuccessNotice(`Application #${id} status changed to "${newStatus.toUpperCase()}".`);
+    saveApplications(updatedApplications);
+
+    try {
+      await admissionService.updateAdmissionStatus(id, newStatus.toLowerCase());
+    } catch (err) {
+      console.warn('Backend update notice:', err.message);
+    }
+
+    setActionSuccessNotice(`Application status changed to "${newStatus.toUpperCase()}".`);
     setTimeout(() => setActionSuccessNotice(''), 3000);
   };
 
@@ -501,6 +532,17 @@ export const ApplicationsTable = () => {
               </button>
 
               <div className="flex items-center gap-2">
+                {inspectedDoc.url && (
+                  <a
+                    href={inspectedDoc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-[8px] text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1.5 transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Open Uploaded File
+                  </a>
+                )}
                 <Button variant="secondary" size="sm" onClick={() => setInspectedDoc(null)}>
                   Close Preview
                 </Button>

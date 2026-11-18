@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch } from 'react-redux';
 import { adminNavItems, adminSearchableItems } from '../features/admin/mockData';
 import { adminStorageService } from '../features/admin/services/adminStorageService';
+import authService from '../services/authService';
+import admissionService from '../services/admissionService';
 import PageTransition from '../components/motion/PageTransition';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
@@ -84,16 +86,32 @@ export const AdminLayout = () => {
 
   useEffect(() => {
     if (commandPaletteOpen) {
-      setSearchApplications(adminStorageService.getApplications());
+      admissionService.getAllAdmissions()
+        .then((apps) => {
+          if (apps && apps.length > 0) {
+            setSearchApplications(apps);
+          } else {
+            setSearchApplications(adminStorageService.getApplications());
+          }
+        })
+        .catch(() => {
+          setSearchApplications(adminStorageService.getApplications());
+        });
     }
   }, [commandPaletteOpen, paletteQuery]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('shs_admin_token');
-    localStorage.removeItem('vtx_admin_token');
-    dispatch({ type: 'auth/logout' });
-    setLogoutConfirmOpen(false);
-    navigate('/admin/login');
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch {
+      // Ignore network errors
+    } finally {
+      localStorage.removeItem('shs_admin_token');
+      localStorage.removeItem('vtx_admin_token');
+      dispatch({ type: 'auth/logout' });
+      setLogoutConfirmOpen(false);
+      navigate('/admin/login');
+    }
   };
 
   const normalizedPaletteQuery = paletteQuery.trim().toLowerCase();

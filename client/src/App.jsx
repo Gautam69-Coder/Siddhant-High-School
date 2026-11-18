@@ -21,6 +21,8 @@ import studentLeadership from "./assets/student-activities-leadership.jpeg";
 import studentPerformingArts from "./assets/student-activities-performing-arts.jpeg";
 import studentSportsFitness from "./assets/student-activities-sports-fitness.jpeg";
 import NewsTicker from "./components/NewsTicker";
+import admissionService from "./services/admissionService";
+import enquiryService from "./services/enquiryService";
 
 const images = {
   hero: homepageSchoolBuilding,
@@ -365,6 +367,9 @@ function AdmissionForm() {
   const [touched, setTouched] = useState({});
   const [formReady, setFormReady] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState({});
+  const [submittingState, setSubmittingState] = useState(false);
+  const [serverError, setServerError] = useState("");
+  const [applicationNumber, setApplicationNumber] = useState("");
   const submitting = useRef(false);
 
   const updateValidation = (form, fieldName, markTouched = false) => {
@@ -374,7 +379,7 @@ function AdmissionForm() {
     setFormReady(Object.keys(nextErrors).length === 0);
   };
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
     if (submitting.current) return;
     const form = event.currentTarget;
@@ -392,8 +397,49 @@ function AdmissionForm() {
       return;
     }
     submitting.current = true;
-    // Future backend integration must return a unique Application ID; this frontend must not invent one.
-    setSubmitted(true);
+    setSubmittingState(true);
+    setServerError("");
+
+    const fd = new FormData();
+    fd.append("student_name", form.elements.studentName.value.trim());
+    fd.append("dob", form.elements.dateOfBirth.value);
+    fd.append("gender", form.elements.gender.value);
+    fd.append("grade_applying", form.elements.class.value);
+    fd.append("previous_school", form.elements.currentSchool?.value?.trim() || "");
+    fd.append("parent_name", form.elements.parentName.value.trim());
+    fd.append("parent_email", form.elements.email.value.trim());
+    fd.append("parent_phone", form.elements.phone.value.trim());
+    fd.append("address", form.elements.address.value.trim());
+    fd.append("city", form.elements.city.value.trim());
+    fd.append("pincode", form.elements.postalCode.value.trim());
+
+    if (form.elements.studentPhoto?.files?.[0]) {
+      fd.append("student_photo", form.elements.studentPhoto.files[0]);
+    }
+    if (form.elements.birthCertificate?.files?.[0]) {
+      fd.append("birth_certificate", form.elements.birthCertificate.files[0]);
+    }
+    if (form.elements.schoolReport?.files?.[0]) {
+      fd.append("previous_school_report", form.elements.schoolReport.files[0]);
+    }
+
+    try {
+      const response = await admissionService.submitAdmission(fd);
+      const appNum =
+        response?.data?.application_number ||
+        response?.application_number ||
+        "Application Registered";
+      setApplicationNumber(appNum);
+      setSubmitted(true);
+    } catch (err) {
+      setServerError(
+        err.message ||
+          "Failed to submit admission application. Please check your information and try again."
+      );
+    } finally {
+      submitting.current = false;
+      setSubmittingState(false);
+    }
   };
 
   const resetForm = () => {
@@ -402,16 +448,19 @@ function AdmissionForm() {
     setTouched({});
     setFormReady(false);
     setSelectedFiles({});
+    setServerError("");
+    setApplicationNumber("");
     submitting.current = false;
+    setSubmittingState(false);
   };
 
   if (submitted) {
     return (
       <SuccessPanel
         title="Application submitted successfully!"
-        message="Thank you for choosing Siddhant High School. This is a frontend demonstration; your application has not been transmitted to or stored by the school."
+        message="Thank you for choosing Siddhant High School. Your admission application has been registered in the school admissions directorate."
         resetLabel="Submit Another Application"
-        note="A unique Application ID will be issued when the admission form is connected to its future backend service."
+        note={`Your Application Number is: ${applicationNumber}. Please save this for all future correspondence.`}
         onReset={resetForm}
       />
     );
@@ -689,8 +738,24 @@ function AdmissionForm() {
           <FieldError name="consent" errors={errors} touched={touched} />
         </span>
       </label>
-      <button className="button primary form-submit" type="submit" disabled={!formReady || submitting.current}>
-        Submit Application <Arrow />
+      {serverError && (
+        <div
+          role="alert"
+          style={{
+            color: "#b91c1c",
+            backgroundColor: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: "8px",
+            padding: "10px 14px",
+            fontSize: "13px",
+            marginBottom: "12px",
+          }}
+        >
+          {serverError}
+        </div>
+      )}
+      <button className="button primary form-submit" type="submit" disabled={!formReady || submittingState}>
+        {submittingState ? "Submitting Application..." : <>Submit Application <Arrow /></>}
       </button>
       {!formReady && (
         <p className="form-hint" aria-live="polite">
@@ -706,6 +771,8 @@ function EnquiryForm() {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [formReady, setFormReady] = useState(false);
+  const [submittingState, setSubmittingState] = useState(false);
+  const [serverError, setServerError] = useState("");
   const submitting = useRef(false);
 
   const updateValidation = (form, fieldName, markTouched = false) => {
@@ -715,7 +782,7 @@ function EnquiryForm() {
     setFormReady(Object.keys(nextErrors).length === 0);
   };
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
     if (submitting.current) return;
     const form = event.currentTarget;
@@ -731,7 +798,27 @@ function EnquiryForm() {
     setFormReady(Object.keys(nextErrors).length === 0);
     if (Object.keys(nextErrors).length) return;
     submitting.current = true;
-    setSubmitted(true);
+    setSubmittingState(true);
+    setServerError("");
+
+    const data = {
+      parent_name: form.elements.parentName.value.trim(),
+      phone: form.elements.contactNumber.value.trim(),
+      email: form.elements.email.value.trim(),
+      grade_interested: form.elements.interestedClass?.value || null,
+      category: form.elements.enquiryCategory.value,
+      message: form.elements.message?.value?.trim() || null,
+    };
+
+    try {
+      await enquiryService.submitEnquiry(data);
+      setSubmitted(true);
+    } catch (err) {
+      setServerError(err.message || "Failed to submit enquiry. Please try again.");
+    } finally {
+      submitting.current = false;
+      setSubmittingState(false);
+    }
   };
 
   const resetForm = () => {
@@ -739,14 +826,16 @@ function EnquiryForm() {
     setErrors({});
     setTouched({});
     setFormReady(false);
+    setServerError("");
     submitting.current = false;
+    setSubmittingState(false);
   };
 
   if (submitted) {
     return (
       <SuccessPanel
         title="Thank you for your enquiry!"
-        message="Your form has been submitted successfully in this website demonstration. Your enquiry has not been transmitted to or stored by the school."
+        message="Your enquiry has been submitted successfully to Siddhant High School. Our admissions desk will reach out to you shortly."
         resetLabel="Submit Another Enquiry"
         onReset={resetForm}
       />
@@ -857,8 +946,24 @@ function EnquiryForm() {
           <FieldError name="message" errors={errors} touched={touched} />
         </label>
       </div>
-      <button className="button primary form-submit" type="submit" disabled={!formReady || submitting.current}>
-        Submit Enquiry <Arrow />
+      {serverError && (
+        <div
+          role="alert"
+          style={{
+            color: "#b91c1c",
+            backgroundColor: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: "8px",
+            padding: "10px 14px",
+            fontSize: "13px",
+            marginBottom: "12px",
+          }}
+        >
+          {serverError}
+        </div>
+      )}
+      <button className="button primary form-submit" type="submit" disabled={!formReady || submittingState}>
+        {submittingState ? "Submitting Enquiry..." : <>Submit Enquiry <Arrow /></>}
       </button>
       {!formReady && (
         <p className="form-hint" aria-live="polite">

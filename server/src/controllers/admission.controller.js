@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
 const crypto = require("crypto");
+const path = require("path");
+const fs = require("fs");
 const AdmissionApplication = require("../models/admissionApplication.model");
-const cloudinary = require("../config/cloudinary");
 
 // Generate application number
 const generateApplicationNumber = () => {
@@ -10,28 +11,25 @@ const generateApplicationNumber = () => {
   return `SHS-${year}-${randomCode}`;
 };
 
-const uploadToCloudinary = (file) => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder: "siddhant-high-school/admissions",
-        resource_type: "auto",
-      },
-      (error, result) => {
-        if (error) {
-          return reject(error);
-        }
-
-        resolve(result.secure_url);
-      }
-    );
-
-    stream.end(file.buffer);
-  });
+// Helper: Safely delete a local file stored under /uploads
+const deleteLocalFile = async (relativeFilePath) => {
+  if (!relativeFilePath || typeof relativeFilePath !== "string") return;
+  try {
+    const normalized = relativeFilePath.startsWith("/")
+      ? relativeFilePath.slice(1)
+      : relativeFilePath;
+    const fullPath = path.join(__dirname, "../../", normalized);
+    if (fs.existsSync(fullPath)) {
+      await fs.promises.unlink(fullPath);
+    }
+  } catch (err) {
+    console.error(`Failed to delete local file ${relativeFilePath}:`, err.message);
+  }
 };
 
 // POST: Create admission application
 const createAdmission = async (req, res, next) => {
+  const files = req.files || {};
   try {
     const {
       student_name,
@@ -46,19 +44,17 @@ const createAdmission = async (req, res, next) => {
       city,
       pincode,
     } = req.body;
-    
-    const files = req.files || {};
 
     const studentPhoto = files.student_photo?.[0]
-      ? await uploadToCloudinary(files.student_photo[0])
+      ? `/uploads/admissions/${files.student_photo[0].filename}`
       : null;
 
     const birthCertificate = files.birth_certificate?.[0]
-      ? await uploadToCloudinary(files.birth_certificate[0])
+      ? `/uploads/admissions/${files.birth_certificate[0].filename}`
       : null;
 
     const previousSchoolReport = files.previous_school_report?.[0]
-      ? await uploadToCloudinary(files.previous_school_report[0])
+      ? `/uploads/admissions/${files.previous_school_report[0].filename}`
       : null;
 
     const application = await AdmissionApplication.create({
@@ -87,6 +83,17 @@ const createAdmission = async (req, res, next) => {
       data: application,
     });
   } catch (error) {
+    // Clean up newly written files on disk if database insertion fails
+    if (files.student_photo?.[0]) {
+      await deleteLocalFile(`/uploads/admissions/${files.student_photo[0].filename}`);
+    }
+    if (files.birth_certificate?.[0]) {
+      await deleteLocalFile(`/uploads/admissions/${files.birth_certificate[0].filename}`);
+    }
+    if (files.previous_school_report?.[0]) {
+      await deleteLocalFile(`/uploads/admissions/${files.previous_school_report[0].filename}`);
+    }
+
     if (error.code === 11000) {
       error.statusCode = 409;
       error.message = "Duplicate application number. Please try again.";
@@ -200,6 +207,15 @@ const deleteAdmission = async (req, res, next) => {
       const error = new Error("Admission application not found");
       error.statusCode = 404;
       throw error;
+    }
+
+    // Clean up associated uploaded files from disk
+    if (application.documents) {
+      await Promise.all([
+        deleteLocalFile(application.documents.student_photo),
+        deleteLocalFile(application.documents.birth_certificate),
+        deleteLocalFile(application.documents.previous_school_report),
+      ]);
     }
 
     return res.status(200).json({

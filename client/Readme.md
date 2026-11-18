@@ -1,4 +1,4 @@
-﻿Siddhant High School — Admin Panel Improvements
+Siddhant High School — Admin Panel Improvements
 
 About This Work
 
@@ -117,7 +117,7 @@ Data Storage & Limitations
 - Uploaded gallery images are stored using browser IndexedDB.
 - Locally stored data is available in the same browser profile.
 - Data does not automatically synchronize across different browsers, devices, or users.
-- Backend integration and Cloudinary storage have not been implemented.
+- Backend uses local disk storage for document uploads; Cloudinary dependency has been removed.
 - Public website publishing and external calendar synchronization are not included in this prototype.
 - Authentication is intended for demonstration and testing, not production security.
 

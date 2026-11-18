@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const ApiResponse = require("./utils/apiResponse");
@@ -16,6 +17,9 @@ app.use(
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(cookieParser());
+
+// Static File Serving for Uploads
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Health Check Endpoint
 app.get("/api/v1/health", (req, res) => {

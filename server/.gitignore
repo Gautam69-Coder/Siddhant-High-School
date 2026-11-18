@@ -15,7 +15,8 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Uploads / temp storage
-uploads/
+uploads/*
+!uploads/**/.gitkeep
 temp/
 
 # OS metadata

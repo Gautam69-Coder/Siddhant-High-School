@@ -23,6 +23,7 @@ import studentSportsFitness from "./assets/student-activities-sports-fitness.jpe
 import NewsTicker from "./components/NewsTicker";
 import admissionService from "./services/admissionService";
 import enquiryService from "./services/enquiryService";
+import calendarEventService from "./services/calendarEventService";
 
 const images = {
   hero: homepageSchoolBuilding,
@@ -106,12 +107,6 @@ const galleryItems = [
   [images.communityMoments, "Community moments", "Student Activities"],
   [images.library, "Reading and discovery", "Academics"],
   [images.science, "Scientific exploration", "Innovation"],
-];
-const sampleEvents = [
-  { date: "2026-11-21", title: "Learning Showcase", category: "Academics", description: "An illustrative opportunity to share learning and creative projects." },
-  { date: "2026-11-27", title: "Games & Movement Day", category: "Sports", description: "A sample event highlighting participation, fitness and teamwork." },
-  { date: "2026-12-05", title: "Arts & Culture Gathering", category: "Cultural", description: "An illustrative celebration of music, art and cultural expression." },
-  { date: "2026-10-16", title: "Community Reading Day", category: "Student Activities", description: "A sample past event about reading and sharing stories." },
 ];
 
 function Arrow({ className = "" }) {
@@ -988,6 +983,22 @@ export default function App() {
     new URLSearchParams(window.location.search).get("form") === "application" ? "application" : "enquiry",
   );
 
+
+  const [calendarEvents, setCalendarEvents] = useState([]);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const events = await calendarEventService.getAllEvents();
+        setCalendarEvents(events);
+      } catch (error) {
+        console.error("Failed to fetch calendar events:", error);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
   const navigate = (to, { replace = false } = {}) => {
     const url = new URL(to, window.location.origin);
     const pathname = url.pathname.replace(/\/+$/, "") || "/";
@@ -1091,10 +1102,13 @@ export default function App() {
   const morePages = pages.filter(([, path]) => path !== "/" && !primaryPaths.has(path));
   const isMorePageActive = morePages.some(([, path]) => path === page);
   const monthLabel = calendarMonth.toLocaleDateString("en", { month: "long", year: "numeric" });
-  const selectedEvent = sampleEvents.find((event) => event.date === selectedDate);
-  const upcomingEvents = sampleEvents
-    .filter((event) => event.date >= getLocalDateInputValue())
-    .sort((first, second) => first.date.localeCompare(second.date));
+  const selectedEvent = calendarEvents.find(
+  (event) => event.date === selectedDate
+);
+
+const upcomingEvents = calendarEvents
+  .filter((event) => event.date >= getLocalDateInputValue())
+  .sort((first, second) => first.date.localeCompare(second.date));
   const calendarLeadingDays = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1).getDay();
   const calendarDayCount = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0).getDate();
   const calendarDates = Array.from({ length: calendarDayCount }, (_, index) => {
@@ -1245,7 +1259,50 @@ export default function App() {
               <RouteLink className="arrow-link" to="/student-activities">Explore Student Activities <Arrow /></RouteLink>
             </section>
             <section className="home-campus"><img src={images.campus} alt="Representative campus courtyard image"/><div><p className="eyebrow light">Discover our campus</p><h2>A welcoming setting for <em>learning and discovery.</em></h2><p>Explore examples of spaces that can support focused study, movement and creative work. Images and facility descriptions are representative and await school confirmation.</p><RouteLink className="button white" to="/infrastructure">Infrastructure &amp; Facilities <Arrow /></RouteLink></div></section>
-            <section className="home-updates section"><div className="section-heading split-heading"><div><p className="eyebrow">Stay connected</p><h2>Latest news &amp; <em>upcoming events.</em></h2></div><p>Sample previews demonstrate where confirmed announcements and dates will appear.</p></div><div className="home-update-grid"><div><h3>News &amp; Announcements <span>Sample content</span></h3>{sampleNews.slice(0, 2).map((item) => <article key={item.id}><small>{item.date} · {item.category}</small><h4>{item.title}</h4><p>{item.summary}</p></article>)}<RouteLink className="arrow-link" to="/news">News &amp; Announcements <Arrow /></RouteLink></div><div><h3>Upcoming Events <span>Sample events</span></h3>{sampleEvents.filter((event) => new Date(`${event.date}T00:00:00`) >= new Date("2026-11-15T00:00:00")).slice(0, 2).map((event) => <article key={event.date}><small>{event.date} · {event.category}</small><h4>{event.title}</h4><p>{event.description}</p></article>)}<RouteLink className="arrow-link" to="/events">Events &amp; Calendar <Arrow /></RouteLink></div></div></section>
+            <section className="home-updates section">
+  <div className="section-heading split-heading">
+    <div>
+      <p className="eyebrow">Stay connected</p>
+      <h2>Latest news &amp; <em>upcoming events.</em></h2>
+    </div>
+    <p>Read the latest school updates and see upcoming events.</p>
+  </div>
+
+  <div className="home-update-grid">
+    <div>
+      <h3>News &amp; Announcements <span>Sample content</span></h3>
+      {sampleNews.slice(0, 2).map((item) => (
+        <article key={item.id}>
+          <small>{item.date} · {item.category}</small>
+          <h4>{item.title}</h4>
+          <p>{item.summary}</p>
+        </article>
+      ))}
+      <RouteLink className="arrow-link" to="/news">
+        News &amp; Announcements <Arrow />
+      </RouteLink>
+    </div>
+
+    <div>
+      <h3>Upcoming Events <span>Live events</span></h3>
+      {calendarEvents
+        .filter((event) => event.date >= getLocalDateInputValue())
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(0, 2)
+        .map((event) => (
+          <article key={event.id}>
+            <small>{event.date} · {event.category}</small>
+            <h4>{event.title}</h4>
+            <p>{event.description || "More details will be shared by the school."}</p>
+          </article>
+        ))}
+
+      <RouteLink className="arrow-link" to="/events">
+        Events &amp; Calendar <Arrow />
+      </RouteLink>
+    </div>
+  </div>
+</section>
             <section className="home-admissions"><p className="eyebrow light">Admissions &amp; enquiries</p><h2>Take the next step in <em>your school journey.</em></h2><p>Use the frontend demonstration forms to explore an application or send an enquiry. No information is transmitted or stored.</p><div><button className="button white" onClick={() => openAdmissions("application")}>Apply for Admission <Arrow /></button><button className="button outline-light" onClick={() => openAdmissions("enquiry")}>Send an Enquiry <Arrow /></button></div></section>
           </>
         )}
@@ -1767,7 +1824,7 @@ export default function App() {
           <section className="events-page section">
             <div className="events-heading">
               <div><p className="eyebrow">Events &amp; Calendar</p><h1>School dates &amp; <em>gatherings.</em></h1></div>
-              <p>All listed dates are illustrative samples, not a confirmed school schedule.</p>
+              <p>Events published by the school are shown here.</p>
             </div>
             <div className="calendar-layout">
               <section className="calendar-panel" id="events-calendar" aria-label="Monthly calendar">
@@ -1780,32 +1837,32 @@ export default function App() {
                 <div className="calendar-grid">
                   {Array.from({ length: calendarLeadingDays }, (_, index) => <span className="calendar-empty" aria-hidden="true" key={`empty-${index}`} />)}
                   {calendarDates.map((date) => {
-                    const event = sampleEvents.find((item) => item.date === date);
+                    const event = calendarEvents.find((item) => item.date === date);
                     const day = Number(date.slice(-2));
-                    return <button type="button" className={`calendar-date ${event ? "has-event" : ""} ${selectedDate === date ? "selected" : ""}`} aria-pressed={selectedDate === date} aria-label={`${date}${event ? `, sample event: ${event.title}` : ", no sample event"}`} key={date} onClick={() => setSelectedDate(date)}><span>{day}</span>{event && <i aria-hidden="true" />}</button>;
+                    return <button type="button" className={`calendar-date ${event ? "has-event" : ""} ${selectedDate === date ? "selected" : ""}`} aria-pressed={selectedDate === date} aria-label={`${date}${event ? `, event: ${event.title}` : ", no event"}`} key={date} onClick={() => setSelectedDate(date)}><span>{day}</span>{event && <i aria-hidden="true" />}</button>;
                   })}
                 </div>
-                <p className="calendar-legend"><i aria-hidden="true" /> Sample event date</p>
+                <p className="calendar-legend"><i aria-hidden="true" /> Event date</p>
               </section>
               <aside className="calendar-detail" aria-live="polite" aria-label="Selected date details">
                 <p className="eyebrow">Selected date</p>
                 {selectedDate ? <time className="calendar-detail-date">{new Date(`${selectedDate}T12:00:00`).toLocaleDateString("en", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</time> : <p className="calendar-empty-state">Choose a date to view its details.</p>}
-                {selectedEvent ? <><span className="calendar-sample-tag">Illustrative sample event</span><h2>{selectedEvent.title}</h2><p className="calendar-category">{selectedEvent.category}</p><p>{selectedEvent.description}</p></> : selectedDate ? <p className="calendar-empty-state">No sample event is listed for this date.</p> : null}
+                {selectedEvent ? <><span className="calendar-sample-tag">School event</span><h2>{selectedEvent.title}</h2><p className="calendar-category">{selectedEvent.category}</p><p>{selectedEvent.description || "More details will be shared by the school."}</p></> : selectedDate ? <p className="calendar-empty-state">No event is scheduled for this date.</p> : null}
               </aside>
             </div>
             <section className="upcoming-events" aria-labelledby="upcoming-events-title">
-              <div className="upcoming-events-heading"><div><p className="eyebrow">Plan ahead</p><h2 id="upcoming-events-title">Upcoming events</h2></div><p>Illustrative sample dates only; no events are confirmed by this prototype.</p></div>
+              <div className="upcoming-events-heading"><div><p className="eyebrow">Plan ahead</p><h2 id="upcoming-events-title">Upcoming events</h2></div><p>Events added by the school will appear here.</p></div>
               {upcomingEvents.length ? (
                 <div className="upcoming-event-list">
                   {upcomingEvents.map((event) => (
                     <article className={selectedDate === event.date ? "is-selected" : ""} key={event.date}>
                       <time dateTime={event.date}>{new Date(`${event.date}T12:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</time>
-                      <div><span className="upcoming-event-category">{event.category}</span><h3>{event.title}</h3><p>{event.description}</p></div>
+                      <div><span className="upcoming-event-category">{event.category}</span><h3>{event.title}</h3><p>{event.description || "More details will be shared by the school."}</p></div>
                       <button type="button" aria-pressed={selectedDate === event.date} aria-label={`Show ${event.title} on the calendar`} onClick={() => { const date = new Date(`${event.date}T12:00:00`); setCalendarMonth(new Date(date.getFullYear(), date.getMonth(), 1)); setSelectedDate(event.date); document.getElementById("events-calendar")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }); }}>View in calendar <Arrow /></button>
                     </article>
                   ))}
                 </div>
-              ) : <p className="upcoming-empty-state">There are no illustrative sample events scheduled from today onward.</p>}
+              ) : <p className="upcoming-empty-state">There are no upcoming events at the moment.</p>}
             </section>
           </section>
         )}

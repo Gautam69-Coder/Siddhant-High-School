@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 const { EVENT_CATEGORIES } = require("../constants/enums");
 
@@ -19,7 +20,7 @@ const calendarEventSchema = new mongoose.Schema(
     },
     start_time: {
       type: String,
-      required: [true, "Start time is required"],
+      default: null,
     },
     end_time: {
       type: String,
@@ -50,7 +51,10 @@ const calendarEventSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+    timestamps: {
+      createdAt: "created_at",
+      updatedAt: "updated_at",
+    },
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
   }

@@ -11,6 +11,7 @@ const galleryMediaSchema = new mongoose.Schema(
     category: {
       type: String,
       enum: GALLERY_CATEGORIES,
+      default: "Campus",
       required: true,
     },
     media_type: {
@@ -27,6 +28,14 @@ const galleryMediaSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: null,
+    },
+    file_size: {
+      type: Number,
+      default: 0,
+    },
+    mime_type: {
+      type: String,
+      default: "image/jpeg",
     },
     tags: {
       type: [String],
@@ -48,5 +57,7 @@ const galleryMediaSchema = new mongoose.Schema(
     toObject: { virtuals: true },
   }
 );
+
+galleryMediaSchema.index({ category: 1, display_order: 1, created_at: -1 });
 
 module.exports = mongoose.model("GalleryMedia", galleryMediaSchema);

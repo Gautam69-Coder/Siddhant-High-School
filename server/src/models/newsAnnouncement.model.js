@@ -10,7 +10,8 @@ const newsAnnouncementSchema = new mongoose.Schema(
     },
     content: {
       type: String,
-      required: [true, "Content is required"],
+      trim: true,
+      default: "",
     },
     category: {
       type: String,
@@ -28,7 +29,7 @@ const newsAnnouncementSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: Object.values(NEWS_STATUS),
-      default: NEWS_STATUS.DRAFT,
+      default: NEWS_STATUS.PUBLISHED,
       index: true,
     },
     publish_date: {
@@ -47,5 +48,8 @@ const newsAnnouncementSchema = new mongoose.Schema(
     toObject: { virtuals: true },
   }
 );
+
+newsAnnouncementSchema.index({ is_urgent: -1, publish_date: -1 });
+newsAnnouncementSchema.index({ status: 1, publish_date: -1 });
 
 module.exports = mongoose.model("NewsAnnouncement", newsAnnouncementSchema);

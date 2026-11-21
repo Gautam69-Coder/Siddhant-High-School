@@ -1,7 +1,7 @@
 import { animate, motion, useMotionValue, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
-const tickerItems = [
+const defaultTickerItems = [
   { id: "office-hours", label: "Office Hours: 8:00 AM – 2:00 PM", to: null },
   { id: "admissions-open", label: "Admissions Open for Academic Session 2027–28", to: "/admissions" },
   { id: "apply", label: "Apply for Admission", to: "/admissions?form=application" },
@@ -41,17 +41,17 @@ function TickerItem({ item, onNavigate, duplicate = false }) {
   );
 }
 
-function TickerGroup({ onNavigate, duplicate = false, groupRef }) {
+function TickerGroup({ items, onNavigate, duplicate = false, groupRef }) {
   return (
     <div className="school-ticker-group" ref={groupRef} aria-hidden={duplicate || undefined}>
-      {tickerItems.map((item) => (
+      {items.map((item) => (
         <TickerItem key={item.id} item={item} onNavigate={onNavigate} duplicate={duplicate} />
       ))}
     </div>
   );
 }
 
-export default function NewsTicker({ onNavigate }) {
+export default function NewsTicker({ onNavigate, announcements = [] }) {
   const prefersReducedMotion = useReducedMotion();
   const windowRef = useRef(null);
   const groupRef = useRef(null);
@@ -61,6 +61,17 @@ export default function NewsTicker({ onNavigate }) {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const paused = hovered || focused;
+
+  const items = announcements.length > 0
+    ? [
+        ...announcements.slice(0, 3).map((item) => ({
+          id: `announcement-${item.id}`,
+          label: `${item.is_urgent ? "⚡ Notice: " : "📢 "}${item.title}`,
+          to: "/news",
+        })),
+        ...defaultTickerItems,
+      ]
+    : defaultTickerItems;
 
   useEffect(() => {
     const tickerWindow = windowRef.current;
@@ -82,7 +93,7 @@ export default function NewsTicker({ onNavigate }) {
     observer.observe(tickerWindow);
     observer.observe(firstGroup);
     return () => observer.disconnect();
-  }, [prefersReducedMotion]);
+  }, [prefersReducedMotion, items]);
 
   useEffect(() => {
     animationRef.current?.stop();
@@ -113,12 +124,13 @@ export default function NewsTicker({ onNavigate }) {
     >
       <div className={`school-ticker-window${prefersReducedMotion ? " is-static" : ""}`} ref={windowRef}>
         {prefersReducedMotion ? (
-          <TickerGroup onNavigate={onNavigate} />
+          <TickerGroup items={items} onNavigate={onNavigate} />
         ) : (
           <motion.div className="school-ticker-track" style={{ x }}>
             {Array.from({ length: loopConfig.copies }, (_, index) => (
               <TickerGroup
                 key={index}
+                items={items}
                 onNavigate={onNavigate}
                 duplicate={index > 0}
                 groupRef={index === 0 ? groupRef : undefined}

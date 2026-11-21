@@ -8,6 +8,9 @@ const AUDIT_ACTIONS = {
   STATUS_CHANGE: "STATUS_CHANGE",
   DOCUMENT_VERIFY: "DOCUMENT_VERIFY",
   CMS_PUBLISH: "CMS_PUBLISH",
+  CMS_DELETE: "CMS_DELETE",
+  MEDIA_UPLOAD: "MEDIA_UPLOAD",
+  MEDIA_DELETE: "MEDIA_DELETE",
 };
 
 const ADMISSION_STATUS = {
@@ -45,7 +48,19 @@ const EVENT_CATEGORIES = ["Academic", "Robotics & STEM", "Cultural", "Sports"];
 
 const MEDIA_TYPES = ["image", "video"];
 
-const GALLERY_CATEGORIES = ["Campus", "Robotics & STEM", "Sports", "Cultural"];
+const GALLERY_CATEGORIES = [
+  "Campus",
+  "Robotics & STEM",
+  "STEM",
+  "Sports",
+  "Cultural",
+  "Arts",
+  "Academics",
+  "Events",
+  "Student Activities",
+  "Cultural Activities",
+  "Innovation",
+];
 
 const FACULTY_DEPARTMENTS = ["Leadership", "Robotics", "Academics", "Sports"];
 

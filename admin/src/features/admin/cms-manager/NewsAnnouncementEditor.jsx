@@ -1,58 +1,115 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import InputField from '../../../components/ui/InputField';
 import Button from '../../../components/ui/Button';
 import Badge from '../../../components/ui/Badge';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2, Loader2 } from 'lucide-react';
 import adminStorageService from '../services/adminStorageService';
+import newsAnnouncementService from '../../../services/newsAnnouncementService';
 
 export const NewsAnnouncementEditor = () => {
   const [newsList, setNewsList] = useState(() => adminStorageService.getNews());
-
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Official');
   const [urgent, setUrgent] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Fetch announcements from backend on mount
+  useEffect(() => {
+    let active = true;
+    const fetchLiveNews = async () => {
+      try {
+        const liveNews = await newsAnnouncementService.getAllNews();
+        if (active && Array.isArray(liveNews) && liveNews.length > 0) {
+          setNewsList(liveNews);
+          adminStorageService.saveNews(liveNews);
+        }
+      } catch (err) {
+        console.warn('Could not fetch announcements from server, using local storage cache:', err.message);
+      }
+    };
+
+    fetchLiveNews();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const resetForm = () => {
     setTitle('');
     setCategory('Official');
     setUrgent(false);
     setEditingId(null);
+    setErrorMessage('');
   };
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
+    setIsSubmitting(true);
+    setErrorMessage('');
 
-    if (editingId !== null) {
-      const updatedNewsList = newsList.map((item) =>
-        item.id === editingId ? { ...item, title, category, urgent } : item
-      );
+    try {
+      if (editingId !== null) {
+        let updatedItem = { id: editingId, title, category, urgent, date: new Date().toISOString().split('T')[0] };
+        try {
+          const res = await newsAnnouncementService.updateNews(editingId, { title, category, urgent });
+          if (res) updatedItem = res;
+        } catch (apiErr) {
+          console.warn('Backend update failed, falling back to local state:', apiErr.message);
+        }
+
+        const updatedNewsList = newsList.map((item) =>
+          item.id === editingId ? { ...item, ...updatedItem } : item
+        );
+        adminStorageService.saveNews(updatedNewsList);
+        setNewsList(updatedNewsList);
+        resetForm();
+        return;
+      }
+
+      let createdItem = {
+        id: Date.now(),
+        title,
+        category,
+        urgent,
+        date: new Date().toISOString().split('T')[0],
+      };
+
+      try {
+        const res = await newsAnnouncementService.createNews({ title, category, urgent });
+        if (res) createdItem = res;
+      } catch (apiErr) {
+        console.warn('Backend creation failed, falling back to local state:', apiErr.message);
+      }
+
+      const updatedNewsList = [createdItem, ...newsList];
       adminStorageService.saveNews(updatedNewsList);
       setNewsList(updatedNewsList);
       resetForm();
-      return;
+    } catch (err) {
+      setErrorMessage(err.message || 'Failed to save notice. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const newItem = {
-      id: Date.now(),
-      title,
-      category,
-      urgent,
-      date: new Date().toISOString().split('T')[0],
-    };
-
-    const updatedNewsList = [newItem, ...newsList];
-    adminStorageService.saveNews(updatedNewsList);
-    setNewsList(updatedNewsList);
-    setTitle('');
   };
 
-  const handleDelete = (id) => {
-    const updatedNewsList = newsList.filter((n) => n.id !== id);
-    adminStorageService.saveNews(updatedNewsList);
-    setNewsList(updatedNewsList);
-    if (editingId === id) resetForm();
+  const handleDelete = async (id) => {
+    try {
+      try {
+        await newsAnnouncementService.deleteNews(id);
+      } catch (apiErr) {
+        console.warn('Backend delete failed, falling back to local storage:', apiErr.message);
+      }
+
+      const updatedNewsList = newsList.filter((n) => n.id !== id);
+      adminStorageService.saveNews(updatedNewsList);
+      setNewsList(updatedNewsList);
+      if (editingId === id) resetForm();
+    } catch (err) {
+      setErrorMessage(err.message || 'Failed to delete notice.');
+    }
   };
 
   const handleEdit = (item) => {
@@ -99,6 +156,10 @@ export const NewsAnnouncementEditor = () => {
           </div>
         </div>
 
+        {errorMessage && (
+          <p className="text-xs text-rose-600 font-medium">{errorMessage}</p>
+        )}
+
         <div className="flex items-center justify-between pt-1">
           <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
             <input
@@ -112,12 +173,22 @@ export const NewsAnnouncementEditor = () => {
 
           <div className="flex items-center gap-2">
             {editingId !== null && (
-              <Button type="button" variant="secondary" size="sm" onClick={resetForm}>
+              <Button type="button" variant="secondary" size="sm" onClick={resetForm} disabled={isSubmitting}>
                 Cancel
               </Button>
             )}
-            <Button type="submit" variant="primary" size="sm" icon={editingId !== null ? Pencil : Plus}>
-              {editingId !== null ? 'Save Changes' : 'Add Notice'}
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              icon={isSubmitting ? Loader2 : editingId !== null ? Pencil : Plus}
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? 'Saving...'
+                : editingId !== null
+                ? 'Save Changes'
+                : 'Add Notice'}
             </Button>
           </div>
         </div>

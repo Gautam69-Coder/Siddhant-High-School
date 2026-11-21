@@ -24,6 +24,8 @@ import NewsTicker from "./components/NewsTicker";
 import admissionService from "./services/admissionService";
 import enquiryService from "./services/enquiryService";
 import calendarEventService from "./services/calendarEventService";
+import newsService from "./services/newsService";
+import galleryService from "./services/galleryService";
 
 const images = {
   hero: homepageSchoolBuilding,
@@ -97,7 +99,6 @@ const sampleNews = [
   { id: "school-activities", date: "Sample · 02 July 2026", category: "School Activities", title: "Ideas for shared learning", summary: "A sample item about learning and participation across the school community." },
   { id: "event-announcement", date: "Sample · 24 June 2026", category: "Event Announcements", title: "Upcoming community gathering", summary: "An illustrative event announcement; no event is currently confirmed by this sample." },
 ];
-const latestAnnouncement = sampleNews[0];
 const galleryItems = [
   [images.classroom, "Learning together", "Academics"],
   [images.campusDetail, "Campus learning environment", "Campus"],
@@ -985,6 +986,11 @@ export default function App() {
 
 
   const [calendarEvents, setCalendarEvents] = useState([]);
+  const [newsList, setNewsList] = useState(sampleNews);
+  const [galleryList, setGalleryList] = useState(() =>
+    galleryItems.map(([src, title, category]) => ({ src, title, category }))
+  );
+  const latestAnnouncement = newsList[0] || null;
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -996,7 +1002,31 @@ export default function App() {
       }
     };
 
+    const fetchNews = async () => {
+      try {
+        const liveNews = await newsService.getAllNews();
+        if (Array.isArray(liveNews) && liveNews.length > 0) {
+          setNewsList(liveNews);
+        }
+      } catch (err) {
+        console.warn("Using sample announcements:", err.message);
+      }
+    };
+
+    const fetchGallery = async () => {
+      try {
+        const liveMedia = await galleryService.getAllGallery();
+        if (Array.isArray(liveMedia) && liveMedia.length > 0) {
+          setGalleryList(liveMedia);
+        }
+      } catch (err) {
+        console.warn("Using sample gallery:", err.message);
+      }
+    };
+
     fetchEvents();
+    fetchNews();
+    fetchGallery();
   }, []);
 
   const navigate = (to, { replace = false } = {}) => {
@@ -1121,7 +1151,7 @@ const upcomingEvents = calendarEvents
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A]">
       <div className="topbar">
         <p className="topbar-society">Operated by Shubham Education &amp; Welfare Society</p>
-        <NewsTicker onNavigate={navigate} />
+        <NewsTicker onNavigate={navigate} announcements={newsList} />
         <RouteLink className="topbar-urgent-badge" to="/news?highlight=latest" aria-label="Urgent notice. View the latest announcement">
           <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 8v4h4l6 4V4L7 8H3Zm4 4 1.2 4h2L9 12m6-5a4 4 0 0 1 0 6" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" /></svg>
           Urgent Notice
@@ -1668,12 +1698,12 @@ const upcomingEvents = calendarEvents
           </div>
           <div className="gallery-filters" role="group" aria-label="Filter gallery images">{["All", "Campus", "Academics", "Student Activities", "Sports", "Cultural Activities", "Innovation"].map((category) => <button type="button" key={category} aria-pressed={galleryCategory === category} className={galleryCategory === category ? "active" : ""} onClick={() => setGalleryCategory(category)}>{category}</button>)}</div>
           <div className="gallery-grid">
-            {galleryItems.filter(([, , category]) => galleryCategory === "All" || category === galleryCategory).map(([src, title, category], index) => (
-              <figure key={title}>
-                <img src={src} alt={title} />
+            {galleryList.filter((item) => galleryCategory === "All" || item.category === galleryCategory).map((item, index) => (
+              <figure key={item.id || item.title || index}>
+                <img src={item.src} alt={item.title} />
                 <figcaption>
-                  <span>0{index + 1}</span>
-                  <p>{title} <small>{category}</small></p>
+                  <span>{index + 1 < 10 ? `0${index + 1}` : index + 1}</span>
+                  <p>{item.title} <small>{item.category}</small></p>
                 </figcaption>
               </figure>
             ))}
@@ -1727,7 +1757,7 @@ const upcomingEvents = calendarEvents
           </div>
           <p className="sample-note">Sample announcements and dates below are illustrative, not confirmed school notices.</p>
           <div className="news-feature"><img src={images.newsFeature} alt="Illustrative classroom learning scene; not a verified Siddhant High School classroom"/><div><span className="tag">Illustrative editorial image</span><h2>Updates for a connected school community</h2><p>When official information is supplied, this space can bring together useful notices, learning updates and community news.</p></div></div>
-          <div className="announcement-list">{sampleNews.map((item) => {
+          <div className="announcement-list">{newsList.map((item) => {
             const isLatest = item.id === latestAnnouncement?.id;
             return (
               <article
@@ -1737,8 +1767,23 @@ const upcomingEvents = calendarEvents
                 tabIndex={isLatest ? -1 : undefined}
                 aria-label={isLatest ? "Latest school announcement" : undefined}
               >
-                <div><span className="tag">{item.category}</span>{isLatest && <span className="latest-announcement-label">Latest</span>}<time>{item.date}</time></div>
-                <section><h2>{item.title}</h2><p>{item.summary}</p></section>
+                <div>
+                  <span className="tag">{item.category}</span>
+                  {isLatest && <span className="latest-announcement-label">Latest</span>}
+                  {item.is_urgent && (
+                    <span
+                      className="latest-announcement-label"
+                      style={{ backgroundColor: "#e11d48", color: "#fff", marginLeft: "6px" }}
+                    >
+                      Urgent
+                    </span>
+                  )}
+                  <time>{item.date}</time>
+                </div>
+                <section>
+                  <h2>{item.title}</h2>
+                  <p>{item.summary || item.content}</p>
+                </section>
               </article>
             );
           })}</div>

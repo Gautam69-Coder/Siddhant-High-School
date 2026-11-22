@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siddhant High School | Attendance</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="top-strip">
+        <span>COMMITTED TO HOLISTIC EDUCATION & A HAPPY SOCIETY</span>
+        <span class="contact-link">✦ CONTACT US</span>
+    </div>
+
+    <header class="main-header">
+        <div class="school-brand">
+            <div class="school-logo"><span>S</span></div>
+
+            <div class="brand-text">
+                <h2>Siddhant High School</h2>
+                <p>KNOWLEDGE · CHARACTER · PURPOSE</p>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <span class="portal-label">TEACHER PORTAL</span>
+            <div class="header-avatar">T</div>
+            <button class="menu-button" aria-label="Open menu">☰</button>
+        </div>
+    </header>
+
+    <main class="page-container">
+
+        <section class="page-intro">
+            <div class="eyebrow">
+                <span class="pink-line"></span>
+                TEACHER DASHBOARD
+            </div>
+
+            <div class="intro-content">
+                <div>
+                    <h1>Student <em>Attendance</em></h1>
+                    <p>
+                        Manage daily attendance and keep track of
+                        student participation with confidence.
+                    </p>
+                </div>
+
+                <div class="date-display">
+                    <span class="date-label">TODAY'S DATE</span>
+                    <strong id="todayDate">--</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="filter-section">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">
+                        <span class="pink-line"></span>
+                        ATTENDANCE DETAILS
+                    </div>
+
+                    <h2>Select your <em>class</em></h2>
+                </div>
+
+                <p>Choose the details before marking attendance.</p>
+            </div>
+
+            <div class="filter-grid">
+
+                <div class="form-group">
+                    <label for="classSelect">CLASS</label>
+
+                    <select id="classSelect">
+                        <option value="8">Class 8</option>
+                        <option value="9">Class 9</option>
+                        <option value="10">Class 10</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="divisionSelect">DIVISION</label>
+
+                    <select id="divisionSelect">
+                        <option value="A">Division A</option>
+                        <option value="B">Division B</option>
+                        <option value="C">Division C</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="attendanceDate">ATTENDANCE DATE</label>
+                    <input type="date" id="attendanceDate">
+                </div>
+
+                <button class="primary-button" id="loadBtn">
+                    Load Students <span>→</span>
+                </button>
+
+            </div>
+        </section>
+
+        <section class="statistics-section">
+
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">
+                        <span class="pink-line"></span>
+                        CLASS OVERVIEW
+                    </div>
+
+                    <h2>Attendance <em>summary</em></h2>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <span class="stat-icon blue">♙</span>
+                        <span class="stat-caption">01</span>
+                    </div>
+
+                    <p>Total Students</p>
+                    <h3 id="totalCount">0</h3>
+                    <small>Students in this class</small>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <span class="stat-icon green">✓</span>
+                        <span class="stat-caption">02</span>
+                    </div>
+
+                    <p>Present</p>
+                    <h3 id="presentCount">0</h3>
+                    <small>Students present today</small>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <span class="stat-icon red">×</span>
+                        <span class="stat-caption">03</span>
+                    </div>
+
+                    <p>Absent</p>
+                    <h3 id="absentCount">0</h3>
+                    <small>Students absent today</small>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <span class="stat-icon gold">%</span>
+                        <span class="stat-caption">04</span>
+                    </div>
+
+                    <p>Attendance Rate</p>
+                    <h3 id="percentageCount">0%</h3>
+                    <small>Present student percentage</small>
+                </div>
+
+            </div>
+        </section>
+
+        <section class="attendance-section">
+
+            <div class="section-heading attendance-title">
+                <div>
+                    <div class="eyebrow">
+                        <span class="pink-line"></span>
+                        DAILY RECORD
+                    </div>
+
+                    <h2>Mark student <em>attendance</em></h2>
+
+                    <p class="section-description">
+                        Select Present or Absent for each student.
+                    </p>
+                </div>
+
+                <div class="student-count" id="studentCountLabel">
+                    0 Students
+                </div>
+            </div>
+
+            <div class="table-toolbar">
+
+                <div class="search-box">
+                    <span>⌕</span>
+
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search by student name or roll number..."
+                    >
+                </div>
+
+                <button class="outline-button" id="markAllBtn">
+                    ✓ Mark All Present
+                </button>
+
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ROLL NO.</th>
+                            <th>STUDENT NAME</th>
+                            <th>ATTENDANCE STATUS</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="studentTable">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="attendance-bottom">
+
+                <div class="attendance-note">
+                    <span>✦</span>
+                    Please verify attendance before submitting.
+                </div>
+
+                <div class="action-buttons">
+                    <button class="reset-button" id="resetBtn">
+                        Reset
+                    </button>
+
+                    <button class="primary-button submit-button" id="submitBtn">
+                        Submit Attendance <span>→</span>
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+        <section class="result-section" id="resultCard" hidden>
+
+            <div class="eyebrow">
+                <span class="pink-line"></span>
+                ATTENDANCE REPORT
+            </div>
+
+            <h2>Attendance <em>successfully reviewed</em></h2>
+
+            <p id="resultMessage"></p>
+
+            <div id="resultDetails"></div>
+
+        </section>
+
+        <section class="bottom-message">
+
+            <div>
+                <span class="eyebrow light-eyebrow">
+                    SIDDHANT HIGH SCHOOL
+                </span>
+
+                <h2>
+                    Learning with purpose,<br>
+                    <em>growing with confidence.</em>
+                </h2>
+            </div>
+
+            <p>
+                Every student matters. Every day counts.
+                Thank you for keeping accurate attendance records.
+            </p>
+
+        </section>
+
+    </main>
+
+    <footer class="main-footer">
+
+        <div class="footer-content">
+
+            <div class="footer-brand">
+
+                <div class="school-brand">
+                    <div class="school-logo footer-logo">
+                        <span>S</span>
+                    </div>
+
+                    <div class="brand-text">
+                        <h2>Siddhant High School</h2>
+                        <p>KNOWLEDGE · CHARACTER · PURPOSE</p>
+                    </div>
+                </div>
+
+                <p>
+                    An environment where curiosity is encouraged,
+                    character is nurtured and every learner is helped to grow.
+                </p>
+
+            </div>
+
+            <div class="footer-links">
+                <h3>Explore</h3>
+                <a href="#">Home</a>
+                <a href="#">About Us</a>
+                <a href="#">School Life</a>
+                <a href="#">Contact Us</a>
+            </div>
+
+            <div class="footer-links">
+                <h3>Teacher Portal</h3>
+                <a href="#">Dashboard</a>
+                <a href="#">Attendance</a>
+                <a href="#">Student Records</a>
+                <a href="#">Reports</a>
+            </div>
+
+        </div>
+
+        <div class="footer-bottom">
+            <span>© 2026 Siddhant High School. All rights reserved.</span>
+            <span>Attendance Management System</span>
+        </div>
+
+    </footer>
+
+    <script src="script.js"></script>
+
+</body>
+</html>

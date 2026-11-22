@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <defs>
+    <linearGradient id="crestGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E3A8A"/>
+      <stop offset="100%" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield Outline -->
+  <path d="M60 12 L98 28 C98 68 60 102 60 102 C60 102 22 68 22 28 Z" fill="url(#crestGrad)" stroke="url(#goldGrad)" stroke-width="3"/>
+  <!-- Internal divider lines -->
+  <path d="M60 20 L60 94" stroke="#D97706" stroke-width="1.5" stroke-opacity="0.4"/>
+  <path d="M28 54 L92 54" stroke="#D97706" stroke-width="1.5" stroke-opacity="0.4"/>
+  <!-- Book / Wisdom Icon -->
+  <path d="M42 42 C46 40 50 40 54 42 L54 50 C50 48 46 48 42 50 Z" fill="#F8FAFC"/>
+  <path d="M78 42 C74 40 70 40 66 42 L66 50 C70 48 74 48 78 50 Z" fill="#F8FAFC"/>
+  <!-- Torch / Flame -->
+  <path d="M60 30 C58 35 62 38 60 42 C63 39 63 34 60 30 Z" fill="url(#goldGrad)"/>
+  <!-- Atom / Innovation Star -->
+  <circle cx="45" cy="74" r="3" fill="#10B981"/>
+  <circle cx="75" cy="74" r="3" fill="#3B82F6"/>
+  <!-- Central Star -->
+  <polygon points="60,66 62,72 68,72 63,76 65,82 60,78 55,82 57,76 52,72 58,72" fill="#F59E0B"/>
+</svg>
+

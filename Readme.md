@@ -1,1 +1,0 @@
-Hii this is Siddhant High school website 

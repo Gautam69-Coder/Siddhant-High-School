@@ -8,9 +8,14 @@ const ApiError = require("./utils/apiError");
 const app = express();
 
 // Core Middlewares
-const defaultAllowedOrigins = ["http://localhost:5173", "http://localhost:5174"];
+const defaultAllowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://siddhant-high-school.pages.dev",
+  "https://admin-shs.pages.dev",
+];
 const envOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim())
+  ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim().replace(/\/+$/, ""))
   : [];
 const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...envOrigins]));
 

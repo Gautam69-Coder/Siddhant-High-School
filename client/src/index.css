@@ -1290,7 +1290,7 @@ h2 em {
 .premium-form label.full {
   grid-column: 1 / -1;
 }
-.premium-form input,
+.premium-form input:not([type="checkbox"]),
 .premium-form select,
 .premium-form textarea {
   display: block;
@@ -1311,18 +1311,18 @@ h2 em {
   padding-top: 14px;
   resize: vertical;
 }
-.premium-form input:focus,
+.premium-form input:not([type="checkbox"]):focus,
 .premium-form select:focus,
 .premium-form textarea:focus {
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(23, 59, 131, 0.08);
 }
-.premium-form input[aria-invalid="true"],
+.premium-form input:not([type="checkbox"])[aria-invalid="true"],
 .premium-form select[aria-invalid="true"],
 .premium-form textarea[aria-invalid="true"] {
   border-color: var(--red);
 }
-.premium-form input:focus-visible,
+.premium-form input:not([type="checkbox"]):focus-visible,
 .premium-form select:focus-visible,
 .premium-form textarea:focus-visible {
   outline: 2px solid rgba(23, 59, 131, 0.3);
@@ -1386,12 +1386,20 @@ h2 em {
   color: #7b8495;
   font-size: 11px;
 }
+.upload-grid input[type="file"] {
+  box-sizing: border-box;
+  height: 46px;
+  min-height: 46px;
+  padding: 5px 10px;
+}
 .premium-form input[type="file"]::file-selector-button {
   border: 0;
   background: #edf1f7;
   color: var(--blue);
-  padding: 8px 11px;
+  padding: 6px 11px;
   margin-right: 10px;
+  line-height: 1.2;
+  vertical-align: middle;
   text-transform: uppercase;
   font-size: 10px;
   font-weight: 900;
@@ -1420,10 +1428,12 @@ h2 em {
 }
 .consent input {
   width: 16px;
+  height: 16px;
   min-height: 16px;
-  margin: 0;
+  padding: 0;
+  margin: 2px 0 0;
   accent-color: var(--blue);
-  flex: 0 0 auto;
+  flex: 0 0 16px;
 }
 .consent span {
   color: #687284;
@@ -1493,6 +1503,35 @@ h2 em {
   margin-top: 7px;
   overflow-wrap: anywhere;
   text-transform: none;
+}
+.age-calculation {
+  display: block;
+  margin: 8px 0 0;
+  text-transform: none;
+}
+.student-photo-preview-trigger {
+  position: relative;
+  width: fit-content;
+  cursor: default;
+}
+.student-photo-preview {
+  display: none;
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  bottom: calc(100% + 8px);
+  width: min(220px, 70vw);
+  max-height: 220px;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid #d9dee7;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 18%);
+  pointer-events: none;
+}
+.student-photo-preview-trigger:hover .student-photo-preview,
+.student-photo-preview-trigger:focus .student-photo-preview {
+  display: block;
 }
 .application-reference {
   display: flex;
@@ -2285,7 +2324,7 @@ footer h4 {
   .premium-form label.wide {
     grid-column: auto;
   }
-  .premium-form input,
+  .premium-form input:not([type="checkbox"]),
   .premium-form select,
   .premium-form textarea {
     min-width: 0;
@@ -2531,8 +2570,8 @@ button, a, summary { font-family: inherit; }
 .form-content-heading { padding-bottom:24px; }
 .form-content-heading h2 { font-size:26px; color:#0f172a; }
 .form-content-heading p:last-child { color:#475569; font-size:13px; }
-.premium-form input,.premium-form select,.premium-form textarea { border-radius:8px; border-color:#cbd5e1; }
-.premium-form input:focus,.premium-form select:focus,.premium-form textarea:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.14); }
+.premium-form input:not([type="checkbox"]),.premium-form select,.premium-form textarea { border-radius:8px; border-color:#cbd5e1; }
+.premium-form input:not([type="checkbox"]):focus,.premium-form select:focus,.premium-form textarea:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.14); }
 .premium-form label { color:#334155; }
 .premium-form .button:focus-visible { outline-color:rgba(37,99,235,.3); }
 .principal-page { background:#f8fafc; gap:clamp(28px,5vw,64px); }
@@ -2618,7 +2657,7 @@ button, a, summary { font-family: inherit; }
 .premium-form { margin-top:18px; }
 .premium-form fieldset { margin-bottom:18px; }
 .form-grid { gap:12px 14px; }
-.premium-form input,.premium-form select { min-height:42px; }
+.premium-form input:not([type="checkbox"]),.premium-form select { min-height:42px; }
 .premium-form textarea { min-height:96px; }
 .phone-field,.premium-form .phone-field input { min-height:42px; }
 .phone-field { border-radius:8px; overflow:hidden; }
@@ -2753,7 +2792,7 @@ main > section { animation:public-page-enter 240ms ease-out both; }
 .premium-form legend { margin-bottom:10px; font-size:19px; }
 .form-grid { gap:10px 12px; }
 .premium-form label { font-size:11px; letter-spacing:.03em; }
-.premium-form input,.premium-form select { min-height:40px; margin-top:6px; padding:0 11px; font-size:13px; }
+.premium-form input:not([type="checkbox"]),.premium-form select { min-height:40px; margin-top:6px; padding:0 11px; font-size:13px; }
 .premium-form textarea { margin-top:6px; padding:10px 11px; font-size:13px; }
 .premium-form .field-error,.premium-form .form-hint { font-size:11px; }
 

@@ -268,6 +268,24 @@ function SuccessPanel({ title, message, resetLabel, onReset, note }) {
 
 const getFieldError = (field) => {
   const { name, validity, type, files } = field;
+  const requiredMessages = {
+    studentName: "Student full name is required.",
+    dateOfBirth: "Date of birth is required.",
+    gender: "Please select a gender.",
+    class: "Please select a class.",
+    parentName: "Parent/Guardian Name is required.",
+    relationship: "Please select a relationship.",
+    phone: "Mobile Number is required.",
+    contactNumber: "Mobile Number is required.",
+    email: "Email Address is required.",
+    address: "Residential Address is required.",
+    city: "City is required.",
+    state: "State is required.",
+    postalCode: "Postal code is required.",
+    studentPhoto: "Student photograph is required.",
+    birthCertificate: "Birth certificate is required.",
+    enquiryCategory: "Please select an enquiry category.",
+  };
   if (type === "file" && files?.length) {
     const file = files[0];
     const allowed = {
@@ -294,13 +312,13 @@ const getFieldError = (field) => {
   }
   if (!field.required && typeof field.value === "string" && !field.value.trim()) return "";
   if (field.required && typeof field.value === "string" && !field.value.trim()) {
-    return "This field is required.";
+    return requiredMessages[name] || "This field is required.";
   }
   if (["studentName", "parentName"].includes(name) && field.value.trim()) {
     const namePattern = /^[\p{L}\p{M}]+(?:[ .'\u2019-]+[\p{L}\p{M}]+)*\.?$/u;
     if (!namePattern.test(field.value.trim())) return "Enter a name using letters, spaces, apostrophes or hyphens.";
   }
-  if (name === "address" && field.value.trim().length < 10) {
+  if (name === "address" && field.value.replace(/\s/g, "").length < 10) {
     return "Enter a complete address with at least 10 non-space characters.";
   }
   if (["phone", "contactNumber"].includes(name) && field.value && !/^\d{10}$/.test(field.value)) {
@@ -310,7 +328,8 @@ const getFieldError = (field) => {
     return "Date of birth cannot be in the future.";
   }
   if (validity.valueMissing) {
-    return type === "checkbox" ? "Please confirm this before submitting." : "This field is required.";
+    if (type === "checkbox") return "Please confirm this before submitting.";
+    return requiredMessages[name] || "This field is required.";
   }
   if (validity.typeMismatch && type === "email") return "Enter a valid email address.";
   if (validity.patternMismatch) {
@@ -327,6 +346,24 @@ function getLocalDateInputValue() {
   const now = new Date();
   const offset = now.getTimezoneOffset();
   return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10);
+}
+
+function getAgeOnDate(dateValue, referenceDate = getLocalDateInputValue()) {
+  const parseDate = (value) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || "");
+    if (!match) return null;
+    const [, year, month, day] = match.map(Number);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) return null;
+    return { year, month, day };
+  };
+  const birth = parseDate(dateValue);
+  const today = parseDate(referenceDate);
+  if (!birth || !today) return null;
+  if (dateValue > referenceDate) return null;
+  return today.year - birth.year - (
+    today.month < birth.month || (today.month === birth.month && today.day < birth.day) ? 1 : 0
+  );
 }
 
 function sanitizePhoneInput(event) {
@@ -363,10 +400,24 @@ function AdmissionForm() {
   const [touched, setTouched] = useState({});
   const [formReady, setFormReady] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState({});
+  const [studentPhotoFile, setStudentPhotoFile] = useState(null);
+  const [studentPhotoPreview, setStudentPhotoPreview] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [applyingClass, setApplyingClass] = useState("");
   const [submittingState, setSubmittingState] = useState(false);
   const [serverError, setServerError] = useState("");
   const [applicationNumber, setApplicationNumber] = useState("");
   const submitting = useRef(false);
+
+  useEffect(() => {
+    if (!studentPhotoFile) {
+      setStudentPhotoPreview("");
+      return undefined;
+    }
+    const previewUrl = URL.createObjectURL(studentPhotoFile);
+    setStudentPhotoPreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [studentPhotoFile]);
 
   const updateValidation = (form, fieldName, markTouched = false) => {
     const nextErrors = getFormErrors(form);
@@ -390,6 +441,11 @@ function AdmissionForm() {
     );
     setFormReady(Object.keys(nextErrors).length === 0);
     if (Object.keys(nextErrors).length) {
+      const firstInvalid = Array.from(form.elements).find((field) => nextErrors[field.name]);
+      if (firstInvalid) {
+        firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
+        firstInvalid.focus({ preventScroll: true });
+      }
       return;
     }
     submitting.current = true;
@@ -444,6 +500,9 @@ function AdmissionForm() {
     setTouched({});
     setFormReady(false);
     setSelectedFiles({});
+    setStudentPhotoFile(null);
+    setDateOfBirth("");
+    setApplyingClass("");
     setServerError("");
     setApplicationNumber("");
     submitting.current = false;
@@ -472,7 +531,10 @@ function AdmissionForm() {
       }}
       onChange={(event) => {
         if (["phone", "contactNumber"].includes(event.target.name)) sanitizePhoneInput(event);
+        if (event.target.name === "dateOfBirth") setDateOfBirth(event.target.value);
+        if (event.target.name === "class") setApplyingClass(event.target.value);
         if (event.target.type === "file") {
+          if (event.target.name === "studentPhoto") setStudentPhotoFile(event.target.files?.[0] || null);
           setSelectedFiles((current) => ({
             ...current,
             [event.target.name]: event.target.files?.[0]?.name || "",
@@ -546,6 +608,11 @@ function AdmissionForm() {
               ))}
             </select>
             <FieldError name="class" errors={errors} touched={touched} />
+            {dateOfBirth && applyingClass && getAgeOnDate(dateOfBirth) !== null && (
+              <span className="field-note age-calculation" aria-live="polite">
+                Calculated age for {applyingClass}: {getAgeOnDate(dateOfBirth)} years as of today. This is informational only.
+              </span>
+            )}
           </label>
           <label>
             Current school
@@ -595,7 +662,7 @@ function AdmissionForm() {
                 maxLength={10}
                 required
                 pattern="[0-9]{10}"
-                placeholder="9876543210"
+                placeholder="Enter 10-digit mobile number"
                 {...fieldAccessibility("phone", errors, touched)}
               />
             </div>
@@ -692,7 +759,10 @@ function AdmissionForm() {
               {...fieldAccessibility("studentPhoto", errors, touched)}
             />
             {selectedFiles.studentPhoto && (
-              <span className="selected-file">Selected file: {selectedFiles.studentPhoto}</span>
+              <span className="selected-file student-photo-preview-trigger" tabIndex={0}>
+                Selected file: {selectedFiles.studentPhoto}
+                {studentPhotoPreview && <img className="student-photo-preview" src={studentPhotoPreview} alt="Selected student photograph preview" />}
+              </span>
             )}
             <FieldError name="studentPhoto" errors={errors} touched={touched} />
           </label>
@@ -750,12 +820,12 @@ function AdmissionForm() {
           {serverError}
         </div>
       )}
-      <button className="button primary form-submit" type="submit" disabled={!formReady || submittingState}>
+      <button className="button primary form-submit" type="submit" disabled={submittingState}>
         {submittingState ? "Submitting Application..." : <>Submit Application <Arrow /></>}
       </button>
       {!formReady && (
         <p className="form-hint" aria-live="polite">
-          Complete all required fields and check the consent box to enable submission.
+          Submit the form to check required fields and see any errors.
         </p>
       )}
     </form>
@@ -792,7 +862,14 @@ function EnquiryForm() {
       ),
     );
     setFormReady(Object.keys(nextErrors).length === 0);
-    if (Object.keys(nextErrors).length) return;
+    if (Object.keys(nextErrors).length) {
+      const firstInvalid = Array.from(form.elements).find((field) => nextErrors[field.name]);
+      if (firstInvalid) {
+        firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
+        firstInvalid.focus({ preventScroll: true });
+      }
+      return;
+    }
     submitting.current = true;
     setSubmittingState(true);
     setServerError("");
@@ -875,7 +952,7 @@ function EnquiryForm() {
               maxLength={10}
               required
               pattern="[0-9]{10}"
-              placeholder="9876543210"
+              placeholder="Enter 10-digit mobile number"
               {...fieldAccessibility("contactNumber", errors, touched)}
             />
           </div>
@@ -958,12 +1035,12 @@ function EnquiryForm() {
           {serverError}
         </div>
       )}
-      <button className="button primary form-submit" type="submit" disabled={!formReady || submittingState}>
+      <button className="button primary form-submit" type="submit" disabled={submittingState}>
         {submittingState ? "Submitting Enquiry..." : <>Submit Enquiry <Arrow /></>}
       </button>
       {!formReady && (
         <p className="form-hint" aria-live="polite">
-          Complete all required fields with valid details to enable submission.
+          Submit the form to check required fields and see any errors.
         </p>
       )}
     </form>

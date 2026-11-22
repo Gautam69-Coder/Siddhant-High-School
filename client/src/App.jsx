@@ -266,6 +266,46 @@ function SuccessPanel({ title, message, resetLabel, onReset, note }) {
   );
 }
 
+function getLocalDateInputValue() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+  return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10);
+}
+
+function getAgeOnDate(dateValue, referenceDate = getLocalDateInputValue()) {
+  const parseDate = (value) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || "");
+    if (!match) return null;
+    const [, year, month, day] = match.map(Number);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) return null;
+    return { year, month, day };
+  };
+  const birth = parseDate(dateValue);
+  const today = parseDate(referenceDate);
+  if (!birth || !today) return null;
+  if (dateValue > referenceDate) return null;
+  return today.year - birth.year - (
+    today.month < birth.month || (today.month === birth.month && today.day < birth.day) ? 1 : 0
+  );
+}
+
+export const CLASS_AGE_CRITERIA = {
+  "Nursery": { minAge: 3, maxAge: 5, label: "3 to 4 years" },
+  "Junior KG": { minAge: 4, maxAge: 6, label: "4 to 5 years" },
+  "Senior KG": { minAge: 5, maxAge: 7, label: "5 to 6 years" },
+  "Class 1": { minAge: 6, maxAge: 8, label: "6 to 7 years" },
+  "Class 2": { minAge: 7, maxAge: 9, label: "7 to 8 years" },
+  "Class 3": { minAge: 8, maxAge: 10, label: "8 to 9 years" },
+  "Class 4": { minAge: 9, maxAge: 11, label: "9 to 10 years" },
+  "Class 5": { minAge: 10, maxAge: 12, label: "10 to 11 years" },
+  "Class 6": { minAge: 11, maxAge: 13, label: "11 to 12 years" },
+  "Class 7": { minAge: 12, maxAge: 14, label: "12 to 13 years" },
+  "Class 8": { minAge: 13, maxAge: 15, label: "13 to 14 years" },
+  "Class 9": { minAge: 14, maxAge: 16, label: "14 to 15 years" },
+  "Class 10": { minAge: 15, maxAge: 18, label: "15 to 16 years" },
+};
+
 const getFieldError = (field) => {
   const { name, validity, type, files } = field;
   const requiredMessages = {
@@ -324,8 +364,45 @@ const getFieldError = (field) => {
   if (["phone", "contactNumber"].includes(name) && field.value && !/^\d{10}$/.test(field.value)) {
     return "Enter exactly 10 digits.";
   }
-  if (name === "dateOfBirth" && field.value && field.value > getLocalDateInputValue()) {
-    return "Date of birth cannot be in the future.";
+  if (name === "dateOfBirth" && field.value) {
+    if (field.value > getLocalDateInputValue()) {
+      return "Date of birth cannot be in the future.";
+    }
+    const age = getAgeOnDate(field.value);
+    if (age === null) {
+      return "Enter a valid date of birth.";
+    }
+    if (age < 3) {
+      return "Student must be at least 3 years old for school admission.";
+    }
+    if (age > 18) {
+      return "Student must be 18 years or younger for school admission.";
+    }
+    const selectedClass = field.form?.elements?.class?.value;
+    if (selectedClass && CLASS_AGE_CRITERIA[selectedClass]) {
+      const criteria = CLASS_AGE_CRITERIA[selectedClass];
+      if (age < criteria.minAge) {
+        return `Student must be at least ${criteria.minAge} years old for ${selectedClass} (current age: ${age} years).`;
+      }
+      if (age > criteria.maxAge) {
+        return `Student exceeds maximum age of ${criteria.maxAge} years for ${selectedClass} (current age: ${age} years).`;
+      }
+    }
+  }
+  if (name === "class" && field.value) {
+    const dobValue = field.form?.elements?.dateOfBirth?.value;
+    if (dobValue && dobValue <= getLocalDateInputValue()) {
+      const age = getAgeOnDate(dobValue);
+      const criteria = CLASS_AGE_CRITERIA[field.value];
+      if (criteria && age !== null) {
+        if (age < criteria.minAge) {
+          return `Student must be at least ${criteria.minAge} years old for ${field.value} (current age: ${age} years).`;
+        }
+        if (age > criteria.maxAge) {
+          return `Student exceeds maximum age of ${criteria.maxAge} years for ${field.value} (current age: ${age} years).`;
+        }
+      }
+    }
   }
   if (validity.valueMissing) {
     if (type === "checkbox") return "Please confirm this before submitting.";
@@ -341,30 +418,6 @@ const getFieldError = (field) => {
   if (validity.badInput) return "Enter a valid value.";
   return "";
 };
-
-function getLocalDateInputValue() {
-  const now = new Date();
-  const offset = now.getTimezoneOffset();
-  return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10);
-}
-
-function getAgeOnDate(dateValue, referenceDate = getLocalDateInputValue()) {
-  const parseDate = (value) => {
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || "");
-    if (!match) return null;
-    const [, year, month, day] = match.map(Number);
-    const parsed = new Date(Date.UTC(year, month - 1, day));
-    if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) return null;
-    return { year, month, day };
-  };
-  const birth = parseDate(dateValue);
-  const today = parseDate(referenceDate);
-  if (!birth || !today) return null;
-  if (dateValue > referenceDate) return null;
-  return today.year - birth.year - (
-    today.month < birth.month || (today.month === birth.month && today.day < birth.day) ? 1 : 0
-  );
-}
 
 function sanitizePhoneInput(event) {
   event.target.value = event.target.value.replace(/\D/g, "").slice(0, 10);
@@ -422,7 +475,20 @@ function AdmissionForm() {
   const updateValidation = (form, fieldName, markTouched = false) => {
     const nextErrors = getFormErrors(form);
     setErrors(nextErrors);
-    if (markTouched && fieldName) setTouched((current) => ({ ...current, [fieldName]: true }));
+    if (markTouched && fieldName) {
+      setTouched((current) => {
+        const next = { ...current, [fieldName]: true };
+        if (
+          (fieldName === "dateOfBirth" || fieldName === "class") &&
+          form.elements.dateOfBirth?.value &&
+          form.elements.class?.value
+        ) {
+          next.dateOfBirth = true;
+          next.class = true;
+        }
+        return next;
+      });
+    }
     setFormReady(Object.keys(nextErrors).length === 0);
   };
 
@@ -570,6 +636,11 @@ function AdmissionForm() {
               {...fieldAccessibility("dateOfBirth", errors, touched)}
             />
             <FieldError name="dateOfBirth" errors={errors} touched={touched} />
+            {dateOfBirth && getAgeOnDate(dateOfBirth) !== null && !(touched.dateOfBirth && errors.dateOfBirth) && (
+              <span className="field-note age-calculation" aria-live="polite">
+                Calculated age: {getAgeOnDate(dateOfBirth)} years old as of today
+              </span>
+            )}
           </label>
           <label>
             Gender <b>*</b>
@@ -608,9 +679,24 @@ function AdmissionForm() {
               ))}
             </select>
             <FieldError name="class" errors={errors} touched={touched} />
-            {dateOfBirth && applyingClass && getAgeOnDate(dateOfBirth) !== null && (
+            {dateOfBirth && applyingClass && getAgeOnDate(dateOfBirth) !== null && !(touched.class && errors.class) && (
+              (() => {
+                const age = getAgeOnDate(dateOfBirth);
+                const criteria = CLASS_AGE_CRITERIA[applyingClass];
+                const isValid = criteria && age >= criteria.minAge && age <= criteria.maxAge;
+                if (isValid) {
+                  return (
+                    <span className="field-note age-calculation age-valid" aria-live="polite">
+                      ✓ Age eligible: {age} years as of today (Criteria: {criteria.minAge}–{criteria.maxAge} years).
+                    </span>
+                  );
+                }
+                return null;
+              })()
+            )}
+            {!dateOfBirth && applyingClass && CLASS_AGE_CRITERIA[applyingClass] && (
               <span className="field-note age-calculation" aria-live="polite">
-                Calculated age for {applyingClass}: {getAgeOnDate(dateOfBirth)} years as of today. This is informational only.
+                Eligible age: {CLASS_AGE_CRITERIA[applyingClass].minAge}–{CLASS_AGE_CRITERIA[applyingClass].maxAge} years ({CLASS_AGE_CRITERIA[applyingClass].label}).
               </span>
             )}
           </label>

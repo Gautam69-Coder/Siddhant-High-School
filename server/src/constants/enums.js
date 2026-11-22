@@ -68,6 +68,22 @@ const WINGS = ["Primary", "Middle", "Senior"];
 
 const PILLAR_NAMES = ["Robotics & AI", "Academic Mastery", "Sports"];
 
+const CLASS_AGE_CRITERIA = {
+  "Nursery": { minAge: 3, maxAge: 5 },
+  "Junior KG": { minAge: 4, maxAge: 6 },
+  "Senior KG": { minAge: 5, maxAge: 7 },
+  "Class 1": { minAge: 6, maxAge: 8 },
+  "Class 2": { minAge: 7, maxAge: 9 },
+  "Class 3": { minAge: 8, maxAge: 10 },
+  "Class 4": { minAge: 9, maxAge: 11 },
+  "Class 5": { minAge: 10, maxAge: 12 },
+  "Class 6": { minAge: 11, maxAge: 13 },
+  "Class 7": { minAge: 12, maxAge: 14 },
+  "Class 8": { minAge: 13, maxAge: 15 },
+  "Class 9": { minAge: 14, maxAge: 16 },
+  "Class 10": { minAge: 15, maxAge: 18 },
+};
+
 module.exports = {
   ROLES,
   AUDIT_ACTIONS,
@@ -83,4 +99,5 @@ module.exports = {
   FACULTY_DEPARTMENTS,
   WINGS,
   PILLAR_NAMES,
+  CLASS_AGE_CRITERIA,
 };

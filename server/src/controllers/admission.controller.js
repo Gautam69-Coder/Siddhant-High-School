@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const path = require("path");
 const fs = require("fs");
 const AdmissionApplication = require("../models/admissionApplication.model");
+const { CLASS_AGE_CRITERIA } = require("../constants/enums");
 
 // Generate application number
 const generateApplicationNumber = () => {
@@ -44,6 +45,62 @@ const createAdmission = async (req, res, next) => {
       city,
       pincode,
     } = req.body;
+
+    if (!dob) {
+      const err = new Error("Date of birth is required.");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const birthDate = new Date(dob);
+    const today = new Date();
+    if (isNaN(birthDate.getTime())) {
+      const err = new Error("Invalid date of birth provided.");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (birthDate > today) {
+      const err = new Error("Date of birth cannot be in the future.");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      calculatedAge--;
+    }
+
+    if (calculatedAge < 3) {
+      const err = new Error("Student must be at least 3 years old for admission.");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (calculatedAge > 18) {
+      const err = new Error("Student must be 18 years or younger for school admission.");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (grade_applying && CLASS_AGE_CRITERIA[grade_applying]) {
+      const criteria = CLASS_AGE_CRITERIA[grade_applying];
+      if (calculatedAge < criteria.minAge) {
+        const err = new Error(
+          `Student must be at least ${criteria.minAge} years old for ${grade_applying} (current age: ${calculatedAge} years).`
+        );
+        err.statusCode = 400;
+        throw err;
+      }
+      if (calculatedAge > criteria.maxAge) {
+        const err = new Error(
+          `Student exceeds maximum age of ${criteria.maxAge} years for ${grade_applying} (current age: ${calculatedAge} years).`
+        );
+        err.statusCode = 400;
+        throw err;
+      }
+    }
 
     const studentPhoto = files.student_photo?.[0]
       ? `/uploads/admissions/${files.student_photo[0].filename}`

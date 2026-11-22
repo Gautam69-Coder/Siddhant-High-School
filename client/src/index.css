@@ -1507,7 +1507,14 @@ h2 em {
 .age-calculation {
   display: block;
   margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #475569;
   text-transform: none;
+}
+.age-calculation.age-valid {
+  color: #166534;
+  font-weight: 600;
 }
 .student-photo-preview-trigger {
   position: relative;

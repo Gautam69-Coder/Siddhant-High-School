@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -11,6 +12,7 @@ export const Modal = ({
   children,
   maxWidth = 'max-w-lg',
   className = '',
+  zIndex = 'z-50',
 }) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -30,9 +32,14 @@ export const Modal = ({
 
   if (!isOpen) return null;
 
-  return (
+  const modalElement = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+      className={twMerge(
+        clsx(
+          'fixed inset-0 flex items-center justify-center p-4 sm:p-6 overflow-y-auto',
+          zIndex
+        )
+      )}
       role="dialog"
       aria-modal="true"
     >
@@ -76,6 +83,8 @@ export const Modal = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement;
 };
 
 export default Modal;

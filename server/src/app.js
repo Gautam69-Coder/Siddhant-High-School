@@ -1,3 +1,4 @@
+
 const express = require("express");
 const path = require("path");
 const cors = require("cors");
@@ -7,6 +8,9 @@ const ApiError = require("./utils/apiError");
 
 const app = express();
 
+// Do not derive client addresses from untrusted forwarded headers.
+app.set("trust proxy", false);
+
 // Core Middlewares
 const defaultAllowedOrigins = [
   "http://localhost:5173",
@@ -14,29 +18,45 @@ const defaultAllowedOrigins = [
   "https://siddhant-high-school.pages.dev",
   "https://admin-shs.pages.dev",
 ];
+
 const envOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim().replace(/\/+$/, ""))
+  ? process.env.CORS_ORIGIN
+      .split(",")
+      .map((o) => o.trim().replace(/\/+$/, ""))
   : [];
-const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...envOrigins]));
+
+// Use Set so that allowedOrigins.has(origin) works correctly.
+const allowedOrigins = new Set([
+  ...defaultAllowedOrigins,
+  ...envOrigins,
+]);
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.has(origin)) {
         callback(null, true);
       } else {
-        callback(null, true);
+        callback(new ApiError(403, "Origin is not allowed by CORS"));
       }
     },
     credentials: true,
   })
 );
+
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(cookieParser());
 
-// Static File Serving for Uploads
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+// Only public gallery media is served statically.
+// Admission documents are private.
+app.use(
+  "/uploads/gallery",
+  express.static(path.join(__dirname, "../uploads/gallery"), {
+    dotfiles: "deny",
+    index: false,
+  })
+);
 
 // Health Check Endpoint
 app.get("/api/v1/health", (req, res) => {
@@ -69,7 +89,9 @@ app.use((err, req, res, next) => {
     statusCode,
     message,
     errors,
-    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+    ...(process.env.NODE_ENV === "development" && {
+      stack: err.stack,
+    }),
   });
 });
 

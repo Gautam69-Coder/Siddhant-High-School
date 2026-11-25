@@ -1,9 +1,13 @@
 const mongoose = require("mongoose");
 const FacultyMember = require("../models/facultyMember.model");
+const ApiError = require("../utils/apiError");
 
 // CREATE faculty member
 const createFaculty = async (req, res, next) => {
   try {
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+      throw new ApiError(400, "Request body must be a JSON object");
+    }
     const faculty = await FacultyMember.create(req.body);
 
     return res.status(201).json({
@@ -67,6 +71,9 @@ const getFacultyById = async (req, res, next) => {
 // UPDATE faculty member
 const updateFaculty = async (req, res, next) => {
   try {
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+      throw new ApiError(400, "Request body must be a JSON object");
+    }
     const { id } = req.params;
 
     if (!mongoose.isValidObjectId(id)) {

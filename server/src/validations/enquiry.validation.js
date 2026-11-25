@@ -1,25 +1,35 @@
 const ApiError = require("../utils/apiError");
 
 const validateEnquiry = (req, res, next) => {
+  const body = req.body && typeof req.body === "object" && !Array.isArray(req.body)
+    ? req.body
+    : {};
   const {
     parent_name,
     email,
     phone,
     category,
-  } = req.body;
+  } = body;
 
   const errors = [];
 
-  if (!parent_name || !parent_name.trim()) {
+  if (typeof parent_name !== "string" || !parent_name.trim()) {
     errors.push("Parent name is required");
   }
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
     errors.push("Valid email is required");
   }
 
-  if (!phone || !phone.trim()) {
+  if (typeof phone !== "string" || !phone.trim()) {
     errors.push("Contact number is required");
+  }
+
+  if (body.grade_interested !== undefined && body.grade_interested !== null && typeof body.grade_interested !== "string") {
+    errors.push("Grade interested must be text");
+  }
+  if (body.message !== undefined && body.message !== null && typeof body.message !== "string") {
+    errors.push("Message must be text");
   }
 
   const allowedCategories = [

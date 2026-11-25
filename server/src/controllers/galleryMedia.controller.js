@@ -6,6 +6,7 @@ const ApiResponse = require("../utils/apiResponse");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("../utils/asyncHandler");
 const { AUDIT_ACTIONS, GALLERY_CATEGORIES } = require("../constants/enums");
+const { escapeRegexLiteral, getSearchTerm, parsePositiveInteger } = require("../utils/searchText");
 
 /**
  * Upload single or multiple images to Campus Media Gallery
@@ -87,25 +88,36 @@ const getAllGalleryMedia = asyncHandler(async (req, res) => {
   const { category, search, limit, page = 1 } = req.query;
 
   const query = {};
+  const searchTerm = getSearchTerm(search);
+  if (searchTerm === null) {
+    throw new ApiError(400, "Search must be text no longer than 100 characters");
+  }
 
+  if (category !== undefined && (typeof category !== "string" || (category !== "All" && !GALLERY_CATEGORIES.includes(category)))) {
+    throw new ApiError(400, "Invalid gallery category");
+  }
   if (category && category !== "All") {
     query.category = category;
   }
 
-  if (search && search.trim()) {
+  if (searchTerm) {
+    const safeSearch = escapeRegexLiteral(searchTerm);
     query.$or = [
-      { title: { $regex: search.trim(), $options: "i" } },
-      { tags: { $in: [new RegExp(search.trim(), "i")] } },
+      { title: { $regex: safeSearch, $options: "i" } },
+      { tags: { $in: [new RegExp(safeSearch, "i")] } },
     ];
   }
 
   let dbQuery = GalleryMedia.find(query)
-    .populate("uploaded_by", "full_name email")
+    .populate("uploaded_by", "full_name")
     .sort({ display_order: 1, created_at: -1 });
 
-  if (limit) {
-    const parsedLimit = parseInt(limit, 10);
-    const parsedPage = parseInt(page, 10) || 1;
+  if (limit !== undefined) {
+    const parsedLimit = parsePositiveInteger(limit);
+    const parsedPage = parsePositiveInteger(page);
+    if (!parsedLimit || parsedLimit > 100 || !parsedPage) {
+      throw new ApiError(400, "Pagination values are invalid");
+    }
     dbQuery = dbQuery.skip((parsedPage - 1) * parsedLimit).limit(parsedLimit);
   }
 
@@ -134,7 +146,7 @@ const getGalleryMediaById = asyncHandler(async (req, res) => {
 
   const media = await GalleryMedia.findById(id).populate(
     "uploaded_by",
-    "full_name email"
+    "full_name"
   );
 
   if (!media) {
@@ -150,6 +162,9 @@ const getGalleryMediaById = asyncHandler(async (req, res) => {
  * Create gallery item with direct URL (e.g. external asset or CDN link)
  */
 const createGalleryMediaDirect = asyncHandler(async (req, res) => {
+  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+    throw new ApiError(400, "Request body must be a JSON object");
+  }
   const {
     title,
     category = "Campus",
@@ -159,8 +174,35 @@ const createGalleryMediaDirect = asyncHandler(async (req, res) => {
     display_order = 0,
   } = req.body;
 
-  if (!title?.trim() || !media_url?.trim()) {
+  if (typeof title !== "string" || !title.trim() || typeof media_url !== "string" || !media_url.trim()) {
     throw new ApiError(400, "Title and media URL are required");
+  }
+  if (thumbnail_url !== undefined && thumbnail_url !== null && typeof thumbnail_url !== "string") {
+    throw new ApiError(400, "Thumbnail URL must be text");
+  }
+  if (typeof category !== "string" || !GALLERY_CATEGORIES.includes(category)) {
+    throw new ApiError(400, "Invalid gallery category");
+  }
+  const isSafeMediaUrl = (value) => {
+    if (value.startsWith("/uploads/gallery/")) {
+      return /^\/uploads\/gallery\/[a-zA-Z0-9_.-]+$/.test(value);
+    }
+    try {
+      const url = new URL(value);
+      return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password;
+    } catch {
+      return false;
+    }
+  };
+  if (!isSafeMediaUrl(media_url) || (thumbnail_url && !isSafeMediaUrl(thumbnail_url))) {
+    throw new ApiError(400, "Media URLs must use HTTP, HTTPS, or a local gallery path");
+  }
+  if (tags !== undefined && (!Array.isArray(tags) || tags.some((tag) => typeof tag !== "string"))) {
+    throw new ApiError(400, "Tags must be an array of text values");
+  }
+  const parsedDisplayOrder = Number(display_order);
+  if (!Number.isFinite(parsedDisplayOrder)) {
+    throw new ApiError(400, "Display order must be a finite number");
   }
 
   const media = await GalleryMedia.create({
@@ -170,7 +212,7 @@ const createGalleryMediaDirect = asyncHandler(async (req, res) => {
     media_url: media_url.trim(),
     thumbnail_url: thumbnail_url?.trim() || null,
     tags: Array.isArray(tags) ? tags : [],
-    display_order: Number(display_order) || 0,
+    display_order: parsedDisplayOrder,
     uploaded_by: req.user._id,
   });
 
@@ -216,7 +258,7 @@ const updateGalleryMedia = asyncHandler(async (req, res) => {
     id,
     { $set: updates },
     { returnDocument: "after", runValidators: true }
-  ).populate("uploaded_by", "full_name email");
+  ).populate("uploaded_by", "full_name");
 
   if (!media) {
     throw new ApiError(404, "Gallery media item not found");
@@ -289,7 +331,8 @@ const deleteGalleryMedia = asyncHandler(async (req, res) => {
  * Bulk delete gallery media items
  */
 const bulkDeleteGalleryMedia = asyncHandler(async (req, res) => {
-  const { ids } = req.body;
+  const body = req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {};
+  const { ids } = body;
 
   if (!Array.isArray(ids) || ids.length === 0) {
     throw new ApiError(400, "Please provide an array of media IDs to delete");

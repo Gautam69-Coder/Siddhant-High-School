@@ -3,7 +3,11 @@ const { NewsAnnouncement, AuditLog } = require("../models");
 const ApiResponse = require("../utils/apiResponse");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("../utils/asyncHandler");
-const { AUDIT_ACTIONS, NEWS_STATUS } = require("../constants/enums");
+const { AUDIT_ACTIONS, NEWS_STATUS, NEWS_CATEGORIES, ROLES } = require("../constants/enums");
+const { escapeRegexLiteral, getSearchTerm, parsePositiveInteger } = require("../utils/searchText");
+
+const canViewUnpublished = (user) =>
+  user && [ROLES.SUPER_ADMIN, ROLES.CMS_EDITOR].includes(user.role);
 
 /**
  * Create a new news/announcement
@@ -68,33 +72,52 @@ const getAllNewsAnnouncements = asyncHandler(async (req, res) => {
   } = req.query;
 
   const query = {};
+  const searchTerm = getSearchTerm(search);
+  if (searchTerm === null) {
+    throw new ApiError(400, "Search must be text no longer than 100 characters");
+  }
 
+  if (category !== undefined && (typeof category !== "string" || (category !== "All" && !NEWS_CATEGORIES.includes(category)))) {
+    throw new ApiError(400, "Invalid announcement category");
+  }
   if (category && category !== "All") {
     query.category = category;
   }
 
   if (is_urgent !== undefined) {
-    query.is_urgent = is_urgent === "true" || is_urgent === true;
+    if (is_urgent !== "true" && is_urgent !== "false") {
+      throw new ApiError(400, "is_urgent must be true or false");
+    }
+    query.is_urgent = is_urgent === "true";
   }
 
-  if (status) {
+  if (canViewUnpublished(req.user) && status !== undefined) {
+    if (typeof status !== "string" || !Object.values(NEWS_STATUS).includes(status)) {
+      throw new ApiError(400, "Invalid announcement status");
+    }
     query.status = status;
+  } else if (!canViewUnpublished(req.user)) {
+    query.status = NEWS_STATUS.PUBLISHED;
   }
 
-  if (search && search.trim()) {
+  if (searchTerm) {
+    const safeSearch = escapeRegexLiteral(searchTerm);
     query.$or = [
-      { title: { $regex: search.trim(), $options: "i" } },
-      { content: { $regex: search.trim(), $options: "i" } },
+      { title: { $regex: safeSearch, $options: "i" } },
+      { content: { $regex: safeSearch, $options: "i" } },
     ];
   }
 
   let dbQuery = NewsAnnouncement.find(query)
-    .populate("author_id", "full_name email role")
+    .populate("author_id", "full_name")
     .sort({ is_urgent: -1, publish_date: -1, created_at: -1 });
 
-  if (limit) {
-    const parsedLimit = parseInt(limit, 10);
-    const parsedPage = parseInt(page, 10) || 1;
+  if (limit !== undefined) {
+    const parsedLimit = parsePositiveInteger(limit);
+    const parsedPage = parsePositiveInteger(page);
+    if (!parsedLimit || parsedLimit > 100 || !parsedPage) {
+      throw new ApiError(400, "Pagination values are invalid");
+    }
     dbQuery = dbQuery.skip((parsedPage - 1) * parsedLimit).limit(parsedLimit);
   }
 
@@ -123,9 +146,11 @@ const getNewsAnnouncementById = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid announcement ID");
   }
 
-  const announcement = await NewsAnnouncement.findById(id).populate(
+  const query = { _id: id };
+  if (!canViewUnpublished(req.user)) query.status = NEWS_STATUS.PUBLISHED;
+  const announcement = await NewsAnnouncement.findOne(query).populate(
     "author_id",
-    "full_name email role"
+    "full_name"
   );
 
   if (!announcement) {
@@ -192,7 +217,7 @@ const updateNewsAnnouncement = asyncHandler(async (req, res) => {
     id,
     { $set: updates },
     { returnDocument: "after", runValidators: true }
-  ).populate("author_id", "full_name email role");
+  ).populate("author_id", "full_name");
 
   if (!announcement) {
     throw new ApiError(404, "Announcement not found");

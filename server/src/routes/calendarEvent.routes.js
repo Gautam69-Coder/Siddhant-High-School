@@ -9,6 +9,7 @@ const {
 } = require("../controllers/calendarEvent.controller");
 
 const { verifyJWT, authorizeRoles } = require("../middlewares/auth.middleware");
+const { requireCsrfToken } = require("../middlewares/csrf.middleware");
 const { ROLES } = require("../constants/enums");
 
 const router = Router();
@@ -16,6 +17,7 @@ const router = Router();
 const canManageEvents = [
   verifyJWT,
   authorizeRoles(ROLES.SUPER_ADMIN, ROLES.CMS_EDITOR),
+  requireCsrfToken,
 ];
 
 // Public: Get all calendar events

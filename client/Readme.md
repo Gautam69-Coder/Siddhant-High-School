@@ -8,15 +8,9 @@ The improvements focus on authentication, data validation, search functionality,
 
 ---
 
-Demo Login Credentials
+Administrator Access
 
-Use the following credentials to access the Admin Panel:
-
-Field| Credentials
-Username / Email| "admin@siddhanthighschool.edu"
-Password| "admin123"
-
-Note: These are demo credentials for testing the prototype, not production login credentials.
+Administrator credentials are not included in this documentation. Access must be provisioned through the authorized setup process using the configured environment variables.
 
 ---
 

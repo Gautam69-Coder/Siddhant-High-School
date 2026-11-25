@@ -41,6 +41,7 @@ export const ApplicationsTable = () => {
   const [gradeFilter, setGradeFilter] = useState('All');
   const [selectedApp, setSelectedApp] = useState(null);
   const [inspectedDoc, setInspectedDoc] = useState(null);
+  const [documentAccessError, setDocumentAccessError] = useState('');
   const [actionSuccessNotice, setActionSuccessNotice] = useState('');
   const [loading, setLoading] = useState(true);
   const [copiedAppId, setCopiedAppId] = useState(false);
@@ -191,6 +192,33 @@ export const ApplicationsTable = () => {
     setSelectedApp(updatedApp);
     if (inspectedDoc && inspectedDoc.name === docName) {
       setInspectedDoc(updatedDocs.find((doc) => doc.name === docName));
+    }
+  };
+
+  const handleOpenDocument = async (doc) => {
+    if (!selectedApp || !doc.accessField) return;
+    const previewWindow = window.open('about:blank', '_blank');
+    if (!previewWindow) {
+      setDocumentAccessError('Allow pop-ups to open this document.');
+      return;
+    }
+    previewWindow.opener = null;
+    setDocumentAccessError('');
+
+    try {
+      const file = await admissionService.getAdmissionDocument(selectedApp.id, doc.accessField);
+      if (previewWindow.closed) return;
+      const previewUrl = URL.createObjectURL(file);
+      previewWindow.location.href = previewUrl;
+      const closeWatcher = window.setInterval(() => {
+        if (previewWindow.closed) {
+          window.clearInterval(closeWatcher);
+          URL.revokeObjectURL(previewUrl);
+        }
+      }, 1000);
+    } catch (error) {
+      previewWindow.close();
+      setDocumentAccessError(error.message || 'Unable to open this document.');
     }
   };
 
@@ -645,7 +673,17 @@ export const ApplicationsTable = () => {
               </button>
 
               <div className="flex items-center gap-2">
-                {inspectedDoc.url && (
+                {inspectedDoc.accessField && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDocument(inspectedDoc)}
+                    className="px-3 py-1.5 rounded-[8px] text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1.5 transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Open Uploaded File
+                  </button>
+                )}
+                {!inspectedDoc.accessField && inspectedDoc.url && (
                   <a
                     href={inspectedDoc.url}
                     target="_blank"
@@ -661,6 +699,9 @@ export const ApplicationsTable = () => {
                 </Button>
               </div>
             </div>
+            {documentAccessError && (
+              <p className="text-xs text-red-600" role="alert">{documentAccessError}</p>
+            )}
           </div>
         </Modal>
       )}

@@ -4,9 +4,13 @@ const { GeneralEnquiry } = require("../models");
 const ApiResponse = require("../utils/apiResponse");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("../utils/asyncHandler");
+const { ENQUIRY_STATUS } = require("../constants/enums");
 
 // Submit General Enquiry
 const createEnquiry = asyncHandler(async (req, res) => {
+  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+    throw new ApiError(400, "Request body must be a JSON object");
+  }
   const {
     parent_name,
     email,
@@ -50,10 +54,17 @@ const getAllEnquiries = asyncHandler(async (req, res) => {
 // Update enquiry status
 const updateEnquiryStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { status, response_notes } = req.body;
+  const body = req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {};
+  const { status, response_notes } = body;
 
   if (!status) {
     throw new ApiError(400, "Status is required");
+  }
+  if (typeof status !== "string" || !Object.values(ENQUIRY_STATUS).includes(status)) {
+    throw new ApiError(400, "Invalid enquiry status");
+  }
+  if (response_notes !== undefined && typeof response_notes !== "string") {
+    throw new ApiError(400, "Response notes must be text");
   }
 
   let enquiry;

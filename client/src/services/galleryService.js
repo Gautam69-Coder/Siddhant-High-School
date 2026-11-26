@@ -2,9 +2,10 @@ import api, { getFileUrl } from "./api";
 
 const normalizeGalleryItem = (item) => ({
   id: item._id || item.id,
-  title: item.title,
+  title: item.title || "Campus Photograph",
   category: item.category || "Campus",
-  src: item.media_url ? getFileUrl(item.media_url) : item.url || item.src,
+  src: item.media_url ? getFileUrl(item.media_url) : item.url || item.src || "",
+  thumbnailSrc: item.thumbnail_url ? getFileUrl(item.thumbnail_url) : "",
   media_url: item.media_url,
 });
 

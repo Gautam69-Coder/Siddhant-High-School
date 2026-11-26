@@ -1,11 +1,11 @@
 import Arrow from "../../components/ui/Arrow";
 import Icon from "../../components/ui/Icon";
 import { RouteLink } from "../../routing/NavigationContext";
-import { sampleNews, learningPillars } from "../../data/siteContent";
+import { learningPillars } from "../../data/siteContent";
 import { images } from "../../data/siteImages";
 import { getLocalDateInputValue } from "../../components/forms/formValidation";
 
-export default function HomePage({ openAdmissions, calendarEvents }) {
+export default function HomePage({ openAdmissions, calendarEvents = [], newsList = [], newsLoading = false }) {
   return (
     <>
 <section className="hero">
@@ -72,14 +72,20 @@ export default function HomePage({ openAdmissions, calendarEvents }) {
 
   <div className="home-update-grid">
     <div>
-      <h3>News &amp; Announcements <span>Sample content</span></h3>
-      {sampleNews.slice(0, 2).map((item) => (
-        <article key={item.id}>
-          <small>{item.date} · {item.category}</small>
-          <h4>{item.title}</h4>
-          <p>{item.summary}</p>
-        </article>
-      ))}
+      <h3>News &amp; Announcements <span>Live updates</span></h3>
+      {newsLoading ? (
+        <p className="upcoming-empty-state" role="status">Loading latest announcements...</p>
+      ) : newsList.length > 0 ? (
+        newsList.slice(0, 2).map((item) => (
+          <article key={item.id}>
+            <small>{item.date} · {item.category}</small>
+            <h4>{item.title}</h4>
+            <p>{item.summary}</p>
+          </article>
+        ))
+      ) : (
+        <p className="upcoming-empty-state">No announcements published at the moment.</p>
+      )}
       <RouteLink className="arrow-link" to="/news">
         News &amp; Announcements <Arrow />
       </RouteLink>
@@ -105,7 +111,7 @@ export default function HomePage({ openAdmissions, calendarEvents }) {
     </div>
   </div>
 </section>
-            <section className="home-admissions"><p className="eyebrow light">Admissions &amp; enquiries</p><h2>Take the next step in <em>your school journey.</em></h2><p>Use the frontend demonstration forms to explore an application or send an enquiry. No information is transmitted or stored.</p><div><button className="button white" onClick={() => openAdmissions("application")}>Apply for Admission <Arrow /></button><button className="button outline-light" onClick={() => openAdmissions("enquiry")}>Send an Enquiry <Arrow /></button></div></section>
+            <section className="home-admissions"><p className="eyebrow light">Admissions &amp; enquiries</p><h2>Take the next step in <em>your school journey.</em></h2><p>Submit an admission application online or send an enquiry directly to our school admissions team.</p><div><button className="button white" onClick={() => openAdmissions("application")}>Apply for Admission <Arrow /></button><button className="button outline-light" onClick={() => openAdmissions("enquiry")}>Send an Enquiry <Arrow /></button></div></section>
           </>
     </>
   );

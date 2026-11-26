@@ -37,6 +37,15 @@ const galleryMediaSchema = new mongoose.Schema(
       type: String,
       default: "image/jpeg",
     },
+    image_data: {
+      type: Buffer,
+      default: null,
+      select: false,
+    },
+    has_binary: {
+      type: Boolean,
+      default: false,
+    },
     tags: {
       type: [String],
       default: [],

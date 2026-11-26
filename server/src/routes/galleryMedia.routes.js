@@ -3,6 +3,7 @@ const {
   uploadGalleryMedia,
   getAllGalleryMedia,
   getGalleryMediaById,
+  getGalleryMediaImage,
   createGalleryMediaDirect,
   updateGalleryMedia,
   deleteGalleryMedia,
@@ -27,6 +28,9 @@ const canManageGallery = [
 
 // Public: Get all gallery items
 router.get("/", getAllGalleryMedia);
+
+// Public: Serve persisted binary image for a gallery item
+router.get("/:id/image", getGalleryMediaImage);
 
 // Public: Get single gallery item
 router.get("/:id", getGalleryMediaById);

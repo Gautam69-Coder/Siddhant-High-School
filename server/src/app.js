@@ -55,8 +55,36 @@ app.use(
   express.static(path.join(__dirname, "../uploads/gallery"), {
     dotfiles: "deny",
     index: false,
+    setHeaders: (res) => {
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    },
   })
 );
+
+// Fallback for /uploads/gallery/:filename if image binary is persisted in MongoDB
+app.get("/uploads/gallery/:filename", async (req, res, next) => {
+  try {
+    const filename = path.basename(req.params.filename || "");
+    if (!filename) return next();
+    const { GalleryMedia } = require("./models");
+    const media = await GalleryMedia.findOne({
+      media_url: `/uploads/gallery/${filename}`,
+    }).select("+image_data");
+    if (!media || !media.image_data || media.image_data.length === 0) {
+      return next();
+    }
+    const buffer = Buffer.isBuffer(media.image_data)
+      ? media.image_data
+      : Buffer.from(media.image_data.buffer || media.image_data);
+    res.setHeader("Content-Type", media.mime_type || "image/jpeg");
+    res.setHeader("Content-Length", buffer.length);
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    return res.status(200).send(buffer);
+  } catch (err) {
+    return next(err);
+  }
+});
 
 // Health Check Endpoint
 app.get("/api/v1/health", (req, res) => {

@@ -1,5 +1,5 @@
 const { Router } = require("express");
-const { verifyJWT, authorizeRoles } = require("../middlewares/auth.middleware");
+const { verifyJWT, optionalVerifyJWT, authorizeRoles } = require("../middlewares/auth.middleware");
 const { requireCsrfToken } = require("../middlewares/csrf.middleware");
 const { ROLES } = require("../constants/enums");
 
@@ -23,10 +23,10 @@ router.post(
 );
 
 // Get all faculty
-router.get("/", getAllFaculty);
+router.get("/", optionalVerifyJWT, getAllFaculty);
 
 // Get faculty by ID
-router.get("/:id", getFacultyById);
+router.get("/:id", optionalVerifyJWT, getFacultyById);
 
 // Update faculty
 router.put(

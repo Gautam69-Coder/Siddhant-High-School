@@ -3,9 +3,10 @@ import { useCallback, useEffect, useState } from "react";
 import calendarEventService from "./services/calendarEventService";
 import newsService from "./services/newsService";
 import galleryService from "./services/galleryService";
+import facultyService from "./services/facultyService";
+import settingsService from "./services/settingsService";
 import Arrow from "./components/ui/Arrow";
 import { CLASS_AGE_CRITERIA } from "./data/admission";
-import { galleryItems, sampleNews } from "./data/siteContent";
 import SiteHeader from "./components/layout/SiteHeader";
 import SiteFooter from "./components/layout/SiteFooter";
 import { NavigationProvider, RouteLink } from "./routing/NavigationContext";
@@ -46,11 +47,60 @@ export default function App() {
   const page = location.pathname;
 
   const [calendarEvents, setCalendarEvents] = useState([]);
-  const [newsList, setNewsList] = useState(sampleNews);
-  const [galleryList, setGalleryList] = useState(() =>
-    galleryItems.map(([src, title, category]) => ({ src, title, category }))
-  );
+  const [newsList, setNewsList] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(true);
+  const [newsError, setNewsError] = useState("");
+  const [galleryList, setGalleryList] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(true);
+  const [galleryError, setGalleryError] = useState("");
+  const [facultyList, setFacultyList] = useState([]);
+  const [facultyLoading, setFacultyLoading] = useState(true);
+  const [facultyError, setFacultyError] = useState("");
+  const [schoolSettings, setSchoolSettings] = useState(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
   const latestAnnouncement = newsList[0] || null;
+
+  const fetchNews = useCallback(async () => {
+    setNewsLoading(true);
+    setNewsError("");
+    try {
+      const liveNews = await newsService.getAllNews();
+      setNewsList(Array.isArray(liveNews) ? liveNews : []);
+    } catch (err) {
+      console.error("Failed to fetch announcements:", err);
+      setNewsError("Unable to load school announcements right now.");
+    } finally {
+      setNewsLoading(false);
+    }
+  }, []);
+
+  const fetchGallery = useCallback(async () => {
+    setGalleryLoading(true);
+    setGalleryError("");
+    try {
+      const liveMedia = await galleryService.getAllGallery();
+      setGalleryList(Array.isArray(liveMedia) ? liveMedia : []);
+    } catch (err) {
+      console.error("Failed to fetch gallery media:", err);
+      setGalleryError("Unable to load gallery images right now.");
+    } finally {
+      setGalleryLoading(false);
+    }
+  }, []);
+
+  const fetchFaculty = useCallback(async () => {
+    setFacultyLoading(true);
+    setFacultyError("");
+    try {
+      const liveFaculty = await facultyService.getAllFaculty();
+      setFacultyList(Array.isArray(liveFaculty) ? liveFaculty : []);
+    } catch (err) {
+      console.error("Failed to fetch faculty directory:", err);
+      setFacultyError("Unable to load faculty profiles right now.");
+    } finally {
+      setFacultyLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -62,32 +112,24 @@ export default function App() {
       }
     };
 
-    const fetchNews = async () => {
+    const fetchSettings = async () => {
+      setSettingsLoading(true);
       try {
-        const liveNews = await newsService.getAllNews();
-        if (Array.isArray(liveNews) && liveNews.length > 0) {
-          setNewsList(liveNews);
-        }
+        const settings = await settingsService.getSettings();
+        setSchoolSettings(settings);
       } catch (err) {
-        console.warn("Using sample announcements:", err.message);
-      }
-    };
-
-    const fetchGallery = async () => {
-      try {
-        const liveMedia = await galleryService.getAllGallery();
-        if (Array.isArray(liveMedia) && liveMedia.length > 0) {
-          setGalleryList(liveMedia);
-        }
-      } catch (err) {
-        console.warn("Using sample gallery:", err.message);
+        console.error("Failed to fetch school settings:", err);
+      } finally {
+        setSettingsLoading(false);
       }
     };
 
     fetchEvents();
     fetchNews();
     fetchGallery();
-  }, []);
+    fetchFaculty();
+    fetchSettings();
+  }, [fetchFaculty, fetchGallery, fetchNews]);
 
   useEffect(() => {
     const pageLabel = pages.find(([, path]) => path === page)?.[0] ?? "Page not found";
@@ -120,10 +162,10 @@ export default function App() {
   return (
     <NavigationProvider value={{ navigate, registerNavigationCleanup }}>
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A]">
-      <SiteHeader page={page} announcements={newsList} onOpenAdmissions={openAdmissions} />
+      <SiteHeader page={page} announcements={newsList} schoolSettings={schoolSettings} onOpenAdmissions={openAdmissions} />
 
       <main id="top">
-        {page === "/" && <HomePage openAdmissions={openAdmissions} calendarEvents={calendarEvents} />}
+        {page === "/" && <HomePage openAdmissions={openAdmissions} calendarEvents={calendarEvents} newsList={newsList} newsLoading={newsLoading} />}
 
         {page === "/about" && <AboutPage />}
 
@@ -132,7 +174,14 @@ export default function App() {
 
         {page === "/academics" && <AcademicsPage />}
 
-        {page === "/management-faculty" && <ManagementFacultyPage />}
+        {page === "/management-faculty" && (
+          <ManagementFacultyPage
+            facultyList={facultyList}
+            facultyLoading={facultyLoading}
+            facultyError={facultyError}
+            onRetry={fetchFaculty}
+          />
+        )}
 
         {page === "/infrastructure" && <InfrastructurePage />}
 
@@ -142,18 +191,35 @@ export default function App() {
 
         {page === "/robotics-innovation" && <RoboticsInnovationPage />}
 
-        {page === "/gallery" && <GalleryPage galleryCategory={galleryCategory} setGalleryCategory={setGalleryCategory} galleryList={galleryList} />}
+        {page === "/gallery" && (
+          <GalleryPage
+            galleryCategory={galleryCategory}
+            setGalleryCategory={setGalleryCategory}
+            galleryList={galleryList}
+            galleryLoading={galleryLoading}
+            galleryError={galleryError}
+            onRetry={fetchGallery}
+          />
+        )}
 
         {page === "/achievements" && <AchievementsPage />}
 
-        {page === "/news" && <NewsPage newsList={newsList} latestAnnouncement={latestAnnouncement} />}
+        {page === "/news" && (
+          <NewsPage
+            newsList={newsList}
+            latestAnnouncement={latestAnnouncement}
+            newsLoading={newsLoading}
+            newsError={newsError}
+            onRetry={fetchNews}
+          />
+        )}
 
         {page === "/admissions" && <AdmissionsPage admissionTab={admissionTab} chooseAdmissionTab={chooseAdmissionTab} />}
 
         {page === "/principal-message" && <PrincipalMessagePage />}
 
         {page === "/events" && <EventsPage calendarMonth={calendarMonth} setCalendarMonth={setCalendarMonth} selectedDate={selectedDate} setSelectedDate={setSelectedDate} calendarEvents={calendarEvents} />}
-        {page === "/contact" && <ContactPage openAdmissions={openAdmissions} />}
+        {page === "/contact" && <ContactPage openAdmissions={openAdmissions} schoolSettings={schoolSettings} settingsLoading={settingsLoading} />}
 
         {!knownRoutes.has(page) && (
           <section className="section placeholder-page not-found-page">
@@ -164,7 +230,7 @@ export default function App() {
         )}
       </main>
 
-      <SiteFooter />
+      <SiteFooter schoolSettings={schoolSettings} />
     </div>
     </NavigationProvider>
   );

@@ -86,12 +86,22 @@ function renderStudents(list = students) {
         // PRESENT BUTTON
 
         const presentButton = document.createElement("button");
-
+        presentButton.type = "button";
         presentButton.className =
             "status-btn present-btn" +
             (student.status === "Present" ? " selected" : "");
+        presentButton.setAttribute("aria-label", "Present");
+        presentButton.setAttribute("aria-pressed", student.status === "Present" ? "true" : "false");
 
-        presentButton.textContent = "✓ Present";
+        const pFull = document.createElement("span");
+        pFull.className = "label-full";
+        pFull.textContent = "✓ Present";
+        const pShort = document.createElement("span");
+        pShort.className = "label-short";
+        pShort.setAttribute("aria-hidden", "true");
+        pShort.textContent = "P";
+        presentButton.appendChild(pFull);
+        presentButton.appendChild(pShort);
 
         presentButton.addEventListener("click", () => {
             markAttendance(student.roll, "Present");
@@ -101,12 +111,22 @@ function renderStudents(list = students) {
         // ABSENT BUTTON
 
         const absentButton = document.createElement("button");
-
+        absentButton.type = "button";
         absentButton.className =
             "status-btn absent-btn" +
             (student.status === "Absent" ? " selected" : "");
+        absentButton.setAttribute("aria-label", "Absent");
+        absentButton.setAttribute("aria-pressed", student.status === "Absent" ? "true" : "false");
 
-        absentButton.textContent = "× Absent";
+        const aFull = document.createElement("span");
+        aFull.className = "label-full";
+        aFull.textContent = "× Absent";
+        const aShort = document.createElement("span");
+        aShort.className = "label-short";
+        aShort.setAttribute("aria-hidden", "true");
+        aShort.textContent = "A";
+        absentButton.appendChild(aFull);
+        absentButton.appendChild(aShort);
 
         absentButton.addEventListener("click", () => {
             markAttendance(student.roll, "Absent");
@@ -239,12 +259,23 @@ function loadStudents() {
 }
 
 
-// MARK ALL PRESENT
+// MARK ALL PRESENT / ABSENT
 
 function markAllPresent() {
 
     students.forEach(student => {
         student.status = "Present";
+    });
+
+    searchStudents();
+    updateStatistics();
+
+}
+
+function markAllAbsent() {
+
+    students.forEach(student => {
+        student.status = "Absent";
     });
 
     searchStudents();
@@ -403,6 +434,19 @@ function submitAttendance() {
 
 // BUTTON EVENT LISTENERS
 
+document.getElementById("classSelect")
+    .addEventListener("change", loadStudents);
+
+document.getElementById("divisionSelect")
+    .addEventListener("change", loadStudents);
+
+document.getElementById("attendanceDate")
+    .addEventListener("change", () => {
+        if (document.getElementById("attendanceDate").value) {
+            loadStudents();
+        }
+    });
+
 document.getElementById("loadBtn")
     .addEventListener("click", loadStudents);
 
@@ -414,6 +458,9 @@ document.getElementById("submitBtn")
 
 document.getElementById("markAllBtn")
     .addEventListener("click", markAllPresent);
+
+document.getElementById("markAllAbsentBtn")
+    .addEventListener("click", markAllAbsent);
 
 document.getElementById("searchInput")
     .addEventListener("input", searchStudents);

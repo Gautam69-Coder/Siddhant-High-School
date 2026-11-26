@@ -1,0 +1,684 @@
+<script>
+const state = {
+    students: [],
+    divisionsByClass: {},
+    user: { name: 'Teacher', role: 'Teacher', isPrincipal: false },
+    verifiedPin: '',
+    isMarked: false,
+    meta: null,
+    isLoading: false,
+    isSubmitting: false,
+    latestLoadSeq: 0,
+    confirmCallback: null
+};
+
+/* =========================================================
+   GAS SERVER CALL HELPER
+   ========================================================= */
+
+function runGas(fnName, ...args) {
+    return new Promise((resolve, reject) => {
+        google.script.run
+            .withSuccessHandler(resolve)
+            .withFailureHandler((err) => {
+                const msg = err && err.message ? err.message : String(err || 'Server error');
+                reject(new Error(msg));
+            })[fnName](...args);
+    });
+}
+
+/* =========================================================
+   INITIALIZATION
+   ========================================================= */
+
+async function initialize() {
+    setBusyLoad(true);
+    try {
+        const data = await runGas('getInitData');
+        state.divisionsByClass = data.divisionsByClass || {};
+        state.user = data.user || state.user;
+
+        document.getElementById('todayDate').textContent = data.todayDisplay || data.todayStr;
+        document.getElementById('attendanceDate').value = data.todayStr;
+        document.getElementById('principalDate').value = data.todayStr;
+
+        const avatarLetter = (state.user.name || 'T').charAt(0).toUpperCase();
+        document.getElementById('userAvatar').textContent = avatarLetter;
+        document.getElementById('userAvatar').title = state.user.email || state.user.name;
+        document.getElementById('portalRoleLabel').textContent =
+            state.user.isPrincipal ? 'PRINCIPAL PORTAL' : 'TEACHER PORTAL';
+
+        populateClassOptions(data.classes || [], data.defaultClass, data.defaultDivision);
+        applyLoadedAttendance(data.initialAttendance);
+    } catch (err) {
+        showToast(err.message, 'error');
+        renderEmptyTable('Unable to load students. Check Google Sheet setup.');
+    } finally {
+        setBusyLoad(false);
+    }
+}
+
+function populateClassOptions(classes, selectedClass, selectedDivision) {
+    const classSelect = document.getElementById('classSelect');
+    classSelect.innerHTML = '';
+
+    classes.forEach((cls) => {
+        const opt = document.createElement('option');
+        opt.value = cls;
+        opt.textContent = 'Class ' + cls;
+        classSelect.appendChild(opt);
+    });
+
+    if (selectedClass) {
+        classSelect.value = selectedClass;
+    }
+
+    updateDivisionOptions(selectedDivision);
+}
+
+function updateDivisionOptions(preferredDivision) {
+    const cls = document.getElementById('classSelect').value;
+    const divisionSelect = document.getElementById('divisionSelect');
+    const divisions = state.divisionsByClass[cls] || ['A'];
+
+    divisionSelect.innerHTML = '';
+    divisions.forEach((div) => {
+        const opt = document.createElement('option');
+        opt.value = div;
+        opt.textContent = 'Division ' + div;
+        divisionSelect.appendChild(opt);
+    });
+
+    if (preferredDivision && divisions.includes(preferredDivision)) {
+        divisionSelect.value = preferredDivision;
+    }
+}
+
+function applyLoadedAttendance(payload) {
+    if (!payload) return;
+    state.students = Array.isArray(payload.students) ? payload.students : [];
+    state.isMarked = Boolean(payload.isMarked);
+    state.meta = payload.meta || null;
+
+    document.getElementById('searchInput').value = '';
+    document.getElementById('resultCard').hidden = true;
+
+    updateRecordBadge();
+    renderStudents();
+    updateStatistics();
+    updateStudentCount();
+}
+
+function updateRecordBadge() {
+    const badge = document.getElementById('recordStateBadge');
+    if (state.isMarked && state.meta) {
+        badge.className = 'record-badge saved';
+        badge.textContent =
+            'Saved Record (' + (state.meta.updatedAt || 'Recorded') + ')';
+    } else {
+        badge.className = 'record-badge';
+        badge.textContent = 'New Entry (Not Submitted)';
+    }
+}
+
+/* =========================================================
+   TEACHER VIEW RENDERING & ACTIONS
+   ========================================================= */
+
+function renderEmptyTable(message) {
+    const table = document.getElementById('studentTable');
+    table.innerHTML = '';
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = 3;
+    cell.className = 'table-empty';
+    cell.textContent = message;
+    row.appendChild(cell);
+    table.appendChild(row);
+}
+
+function renderStudents(list = state.students) {
+    const table = document.getElementById('studentTable');
+    table.innerHTML = '';
+
+    if (list.length === 0) {
+        renderEmptyTable('No students found for this class and filter.');
+        return;
+    }
+
+    list.forEach((student) => {
+        const row = document.createElement('tr');
+
+        const rollCell = document.createElement('td');
+        rollCell.className = 'roll-number';
+        rollCell.textContent = student.roll;
+
+        const nameCell = document.createElement('td');
+        nameCell.className = 'student-name';
+        nameCell.textContent = student.name;
+
+        const statusCell = document.createElement('td');
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'status-buttons';
+
+        const presentButton = document.createElement('button');
+        presentButton.type = 'button';
+        presentButton.className =
+            'status-btn present-btn' + (student.status === 'Present' ? ' selected' : '');
+        presentButton.setAttribute('aria-label', 'Present');
+        presentButton.setAttribute('aria-pressed', student.status === 'Present' ? 'true' : 'false');
+        const pFull = document.createElement('span');
+        pFull.className = 'label-full';
+        pFull.textContent = '✓ Present';
+        const pShort = document.createElement('span');
+        pShort.className = 'label-short';
+        pShort.setAttribute('aria-hidden', 'true');
+        pShort.textContent = 'P';
+        presentButton.appendChild(pFull);
+        presentButton.appendChild(pShort);
+        presentButton.addEventListener('click', () => markAttendance(student.roll, 'Present'));
+
+        const absentButton = document.createElement('button');
+        absentButton.type = 'button';
+        absentButton.className =
+            'status-btn absent-btn' + (student.status === 'Absent' ? ' selected' : '');
+        absentButton.setAttribute('aria-label', 'Absent');
+        absentButton.setAttribute('aria-pressed', student.status === 'Absent' ? 'true' : 'false');
+        const aFull = document.createElement('span');
+        aFull.className = 'label-full';
+        aFull.textContent = '× Absent';
+        const aShort = document.createElement('span');
+        aShort.className = 'label-short';
+        aShort.setAttribute('aria-hidden', 'true');
+        aShort.textContent = 'A';
+        absentButton.appendChild(aFull);
+        absentButton.appendChild(aShort);
+        absentButton.addEventListener('click', () => markAttendance(student.roll, 'Absent'));
+
+        buttonContainer.appendChild(presentButton);
+        buttonContainer.appendChild(absentButton);
+        statusCell.appendChild(buttonContainer);
+
+        row.appendChild(rollCell);
+        row.appendChild(nameCell);
+        row.appendChild(statusCell);
+        table.appendChild(row);
+    });
+}
+
+function markAttendance(roll, status) {
+    const student = state.students.find((item) => item.roll === roll);
+    if (!student) return;
+    student.status = status;
+    searchStudents();
+    updateStatistics();
+}
+
+function updateStatistics() {
+    const total = state.students.length;
+    const present = state.students.filter((s) => s.status === 'Present').length;
+    const absent = state.students.filter((s) => s.status === 'Absent').length;
+    const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('presentCount').textContent = present;
+    document.getElementById('absentCount').textContent = absent;
+    document.getElementById('percentageCount').textContent = percentage + '%';
+}
+
+function updateStudentCount() {
+    document.getElementById('studentCountLabel').textContent =
+        state.students.length + ' Students';
+}
+
+function searchStudents() {
+    const searchValue = document.getElementById('searchInput').value.toLowerCase().trim();
+    const filtered = state.students.filter((student) => {
+        return (
+            student.name.toLowerCase().includes(searchValue) ||
+            String(student.roll).includes(searchValue)
+        );
+    });
+    renderStudents(filtered);
+}
+
+async function loadStudents() {
+    const selectedClass = document.getElementById('classSelect').value;
+    const selectedDivision = document.getElementById('divisionSelect').value;
+    const selectedDate = document.getElementById('attendanceDate').value;
+
+    if (!selectedDate) {
+        showToast('Please select an attendance date.', 'error');
+        return;
+    }
+
+    const seq = ++state.latestLoadSeq;
+    setBusyLoad(true);
+    try {
+        const result = await runGas(
+            'getClassAttendance',
+            selectedClass,
+            selectedDivision,
+            selectedDate
+        );
+        if (seq !== state.latestLoadSeq) return;
+        applyLoadedAttendance(result);
+        showToast(
+            result.isMarked
+                ? 'Loaded saved attendance for Class ' + selectedClass + '-' + selectedDivision + '.'
+                : 'Loaded roster for Class ' + selectedClass + '-' + selectedDivision + '.',
+            'success'
+        );
+    } catch (err) {
+        if (seq !== state.latestLoadSeq) return;
+        showToast(err.message, 'error');
+    } finally {
+        if (seq === state.latestLoadSeq) {
+            setBusyLoad(false);
+        }
+    }
+}
+
+function markAllPresent() {
+    state.students.forEach((student) => {
+        student.status = 'Present';
+    });
+    searchStudents();
+    updateStatistics();
+}
+
+function markAllAbsent() {
+    state.students.forEach((student) => {
+        student.status = 'Absent';
+    });
+    searchStudents();
+    updateStatistics();
+}
+
+function resetAttendance() {
+    openConfirmModal(
+        'Reset Attendance?',
+        'Reset all students in the current view back to Present? (Changes are not saved until you click Submit Attendance.)',
+        () => {
+            state.students.forEach((student) => {
+                student.status = 'Present';
+            });
+            document.getElementById('searchInput').value = '';
+            document.getElementById('resultCard').hidden = true;
+            renderStudents();
+            updateStatistics();
+        }
+    );
+}
+
+async function submitAttendance() {
+    if (state.isSubmitting) return;
+
+    const selectedClass = document.getElementById('classSelect').value;
+    const selectedDivision = document.getElementById('divisionSelect').value;
+    const selectedDate = document.getElementById('attendanceDate').value;
+
+    if (!selectedDate) {
+        showToast('Please select an attendance date.', 'error');
+        return;
+    }
+    if (state.students.length === 0) {
+        showToast('No students in this class to submit.', 'error');
+        return;
+    }
+
+    setBusySubmit(true);
+    try {
+        const res = await runGas('submitAttendance', {
+            className: selectedClass,
+            division: selectedDivision,
+            dateStr: selectedDate,
+            teacherName: state.user.name,
+            records: state.students.map((s) => ({
+                roll: s.roll,
+                name: s.name,
+                status: s.status
+            }))
+        });
+
+        state.isMarked = true;
+        state.meta = { markedBy: res.markedBy, updatedAt: res.updatedAt };
+        updateRecordBadge();
+        renderResultCard(res);
+        showToast(
+            res.isUpdate
+                ? 'Attendance updated for Class ' + res.className + '-' + res.division + '.'
+                : 'Attendance saved for Class ' + res.className + '-' + res.division + '.',
+            'success'
+        );
+    } catch (err) {
+        showToast('Save failed: ' + err.message, 'error');
+    } finally {
+        setBusySubmit(false);
+    }
+}
+
+function renderResultCard(res) {
+    const resultCard = document.getElementById('resultCard');
+    const resultMessage = document.getElementById('resultMessage');
+    const resultDetails = document.getElementById('resultDetails');
+
+    resultMessage.textContent =
+        'Class ' +
+        res.className +
+        ' - ' +
+        res.division +
+        ' | Date: ' +
+        res.dateStr +
+        ' | Saved at ' +
+        res.updatedAt;
+
+    resultDetails.innerHTML = '';
+
+    const summary = document.createElement('div');
+    const lines = [
+        'Total Students: ' + res.total,
+        'Present: ' + res.present,
+        'Absent: ' + res.absent + ' (' + res.pct + '% Present)'
+    ];
+    lines.forEach((text) => {
+        const p = document.createElement('p');
+        p.textContent = text;
+        summary.appendChild(p);
+    });
+
+    const heading = document.createElement('h4');
+    heading.textContent = 'Absent Students';
+    heading.style.marginTop = '15px';
+
+    const list = document.createElement('ul');
+    if (!res.absentStudents || res.absentStudents.length === 0) {
+        const item = document.createElement('li');
+        item.textContent = 'No absent students';
+        list.appendChild(item);
+    } else {
+        res.absentStudents.forEach((student) => {
+            const item = document.createElement('li');
+            item.textContent = student.name + ' (Roll No. ' + student.roll + ')';
+            list.appendChild(item);
+        });
+    }
+
+    resultDetails.appendChild(summary);
+    resultDetails.appendChild(heading);
+    resultDetails.appendChild(list);
+
+    resultCard.hidden = false;
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* =========================================================
+   PRINCIPAL VIEW & AUTH FLOW
+   ========================================================= */
+
+function switchView(viewName) {
+    const teacherView = document.getElementById('teacherView');
+    const principalView = document.getElementById('principalView');
+    const navTeacherBtn = document.getElementById('navTeacherBtn');
+    const navPrincipalBtn = document.getElementById('navPrincipalBtn');
+
+    if (viewName === 'principal') {
+        if (!state.user.isPrincipal && !state.verifiedPin) {
+            openPinModal();
+            return;
+        }
+        teacherView.hidden = true;
+        principalView.hidden = false;
+        navTeacherBtn.classList.remove('active');
+        navPrincipalBtn.classList.add('active');
+        loadPrincipalSummary();
+    } else {
+        principalView.hidden = true;
+        teacherView.hidden = false;
+        navPrincipalBtn.classList.remove('active');
+        navTeacherBtn.classList.add('active');
+    }
+}
+
+async function loadPrincipalSummary() {
+    const dateVal = document.getElementById('principalDate').value;
+    const btn = document.getElementById('loadPrincipalBtn');
+    btn.disabled = true;
+    btn.textContent = 'Loading...';
+
+    try {
+        const data = await runGas('getPrincipalSummary', dateVal, state.verifiedPin);
+        const t = data.totals;
+
+        document.getElementById('pClassesCount').textContent =
+            t.submittedClasses + ' / ' + t.totalClasses;
+        document.getElementById('pPendingLabel').textContent =
+            t.pendingClasses + ' pending';
+        document.getElementById('pPresentCount').textContent = t.presentStudents;
+        document.getElementById('pTotalStudentsLabel').textContent =
+            'Out of ' + t.totalStudents + ' students';
+        document.getElementById('pAbsentCount').textContent = t.absentStudents;
+        document.getElementById('pOverallPct').textContent = t.overallPct + '%';
+
+        renderPrincipalTable(data.classes || [], data.dateStr);
+    } catch (err) {
+        showToast(err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Refresh <span aria-hidden="true">→</span>';
+    }
+}
+
+function renderPrincipalTable(classes, dateStr) {
+    const tbody = document.getElementById('principalTableBody');
+    tbody.innerHTML = '';
+
+    if (classes.length === 0) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 7;
+        td.className = 'table-empty';
+        td.textContent = 'No classes found in the Students sheet.';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+    }
+
+    classes.forEach((clsRow) => {
+        const tr = document.createElement('tr');
+
+        const classTd = document.createElement('td');
+        classTd.className = 'student-name';
+        classTd.textContent = 'Class ' + clsRow.className + ' - ' + clsRow.division;
+
+        const statusTd = document.createElement('td');
+        const pill = document.createElement('span');
+        pill.className =
+            'pill-badge ' + (clsRow.status === 'Submitted' ? 'submitted' : 'pending');
+        pill.textContent = clsRow.status;
+        statusTd.appendChild(pill);
+
+        const countTd = document.createElement('td');
+        countTd.textContent =
+            clsRow.status === 'Submitted'
+                ? clsRow.present + ' / ' + clsRow.total
+                : '0 / ' + clsRow.total;
+
+        const pctTd = document.createElement('td');
+        pctTd.textContent = clsRow.status === 'Submitted' ? clsRow.pct + '%' : '--';
+
+        const absentTd = document.createElement('td');
+        absentTd.textContent = clsRow.absentNames;
+
+        const byTd = document.createElement('td');
+        byTd.textContent =
+            clsRow.status === 'Submitted'
+                ? clsRow.markedBy + ' (' + clsRow.updatedAt + ')'
+                : 'Not marked yet';
+
+        const actionTd = document.createElement('td');
+        const openBtn = document.createElement('button');
+        openBtn.type = 'button';
+        openBtn.className = 'outline-button small-action';
+        openBtn.textContent = 'View / Edit';
+        openBtn.addEventListener('click', () => {
+            document.getElementById('classSelect').value = clsRow.className;
+            updateDivisionOptions(clsRow.division);
+            document.getElementById('attendanceDate').value = dateStr;
+            switchView('teacher');
+            loadStudents();
+        });
+        actionTd.appendChild(openBtn);
+
+        tr.appendChild(classTd);
+        tr.appendChild(statusTd);
+        tr.appendChild(countTd);
+        tr.appendChild(pctTd);
+        tr.appendChild(absentTd);
+        tr.appendChild(byTd);
+        tr.appendChild(actionTd);
+        tbody.appendChild(tr);
+    });
+}
+
+/* =========================================================
+   MODALS, TOASTS & LOADING HELPERS
+   ========================================================= */
+
+function setBusyLoad(isBusy) {
+    state.isLoading = isBusy;
+    const loadBtn = document.getElementById('loadBtn');
+    loadBtn.disabled = isBusy;
+    loadBtn.innerHTML = isBusy
+        ? 'Loading...'
+        : 'Load Students <span aria-hidden="true">→</span>';
+}
+
+function setBusySubmit(isBusy) {
+    state.isSubmitting = isBusy;
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = isBusy;
+    submitBtn.innerHTML = isBusy
+        ? 'Saving to Sheet...'
+        : 'Submit Attendance <span aria-hidden="true">→</span>';
+}
+
+let toastTimer = null;
+function showToast(message, type) {
+    const toast = document.getElementById('toastBanner');
+    toast.textContent = message;
+    toast.className = 'toast-banner ' + (type === 'error' ? 'error' : 'success');
+    toast.hidden = false;
+
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+        toast.hidden = true;
+    }, 4500);
+}
+
+function openConfirmModal(title, message, onConfirm) {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    state.confirmCallback = onConfirm;
+    document.getElementById('confirmModal').hidden = false;
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirmModal').hidden = true;
+    state.confirmCallback = null;
+}
+
+function openPinModal() {
+    document.getElementById('principalPinInput').value = '';
+    document.getElementById('pinErrorMsg').hidden = true;
+    document.getElementById('pinModal').hidden = false;
+    document.getElementById('principalPinInput').focus();
+}
+
+function closePinModal() {
+    document.getElementById('pinModal').hidden = true;
+}
+
+async function handleVerifyPin() {
+    const pin = document.getElementById('principalPinInput').value.trim();
+    const errEl = document.getElementById('pinErrorMsg');
+    const btn = document.getElementById('pinVerifyBtn');
+
+    if (!pin) {
+        errEl.textContent = 'Please enter the Principal passcode.';
+        errEl.hidden = false;
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Verifying...';
+    try {
+        const res = await runGas('verifyPrincipalPin', pin);
+        if (res.ok) {
+            state.verifiedPin = pin;
+            closePinModal();
+            switchView('principal');
+        } else {
+            errEl.textContent = res.message || 'Invalid passcode.';
+            errEl.hidden = false;
+        }
+    } catch (err) {
+        errEl.textContent = err.message;
+        errEl.hidden = false;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Unlock Overview';
+    }
+}
+
+/* =========================================================
+   EVENT LISTENERS
+   ========================================================= */
+
+document.getElementById('classSelect').addEventListener('change', () => {
+    updateDivisionOptions();
+    loadStudents();
+});
+document.getElementById('divisionSelect').addEventListener('change', loadStudents);
+document.getElementById('attendanceDate').addEventListener('change', () => {
+    if (document.getElementById('attendanceDate').value) {
+        loadStudents();
+    }
+});
+document.getElementById('loadBtn').addEventListener('click', loadStudents);
+document.getElementById('resetBtn').addEventListener('click', resetAttendance);
+document.getElementById('submitBtn').addEventListener('click', submitAttendance);
+document.getElementById('markAllBtn').addEventListener('click', markAllPresent);
+document.getElementById('markAllAbsentBtn').addEventListener('click', markAllAbsent);
+document.getElementById('searchInput').addEventListener('input', searchStudents);
+
+document.getElementById('navTeacherBtn').addEventListener('click', () => switchView('teacher'));
+document.getElementById('navPrincipalBtn').addEventListener('click', () => switchView('principal'));
+document.getElementById('loadPrincipalBtn').addEventListener('click', loadPrincipalSummary);
+
+document.getElementById('footerTeacherLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    switchView('teacher');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+document.getElementById('footerPrincipalLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    switchView('principal');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+document.getElementById('confirmCancelBtn').addEventListener('click', closeConfirmModal);
+document.getElementById('confirmOkBtn').addEventListener('click', () => {
+    const cb = state.confirmCallback;
+    closeConfirmModal();
+    if (cb) cb();
+});
+
+document.getElementById('pinCancelBtn').addEventListener('click', closePinModal);
+document.getElementById('pinVerifyBtn').addEventListener('click', handleVerifyPin);
+document.getElementById('principalPinInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleVerifyPin();
+});
+
+initialize();
+</script>

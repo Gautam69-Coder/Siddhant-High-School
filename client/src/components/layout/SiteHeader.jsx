@@ -18,7 +18,7 @@ const primaryPaths = new Set([
 const primaryPages = pages.filter(([, path]) => primaryPaths.has(path));
 const morePages = pages.filter(([, path]) => path !== "/" && !primaryPaths.has(path));
 
-export default function SiteHeader({ page, announcements, onOpenAdmissions }) {
+export default function SiteHeader({ page, announcements, schoolSettings, onOpenAdmissions }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const desktopMoreRef = useRef(null);
   const mobileMoreRef = useRef(null);
@@ -57,8 +57,8 @@ export default function SiteHeader({ page, announcements, onOpenAdmissions }) {
   return (
     <>
       <div className="topbar">
-        <p className="topbar-society">Operated by Shubham Education &amp; Welfare Society</p>
-        <NewsTicker onNavigate={navigate} announcements={announcements} />
+        <p className="topbar-society">Operated by {schoolSettings?.society_name || "Shubham Education & Welfare Society"}</p>
+        <NewsTicker onNavigate={navigate} announcements={announcements} schoolSettings={schoolSettings} />
         <RouteLink className="topbar-urgent-badge" to="/news?highlight=latest" aria-label="Urgent notice. View the latest announcement">
           <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 8v4h4l6 4V4L7 8H3Zm4 4 1.2 4h2L9 12m6-5a4 4 0 0 1 0 6" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" /></svg>
           Urgent Notice
@@ -69,8 +69,8 @@ export default function SiteHeader({ page, announcements, onOpenAdmissions }) {
         <RouteLink className="brand" to="/" aria-label="Siddhant High School home">
           <img src={logo} alt="Original Siddhant High School logo" />
           <span className="brand-copy">
-            <strong>Siddhant High School</strong>
-            <small>Knowledge Â· Character Â· Purpose</small>
+            <strong>{schoolSettings?.school_name || "Siddhant High School"}</strong>
+            <small>Knowledge &middot; Character &middot; Purpose</small>
           </span>
         </RouteLink>
         <nav className="desktop-nav" aria-label="Primary navigation">

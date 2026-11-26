@@ -7,6 +7,7 @@ const facultyRoutes = require("./faculty.routes");
 const calendarEventRoutes = require("./calendarEvent.routes");
 const newsAnnouncementRoutes = require("./newsAnnouncement.routes");
 const galleryMediaRoutes = require("./galleryMedia.routes");
+const settingsRoutes = require("./settings.routes");
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use("/calendar-events", calendarEventRoutes);
 router.use("/news-announcements", newsAnnouncementRoutes);
 router.use("/news", newsAnnouncementRoutes); // Convenient alias
 router.use("/gallery", galleryMediaRoutes);
+router.use("/settings", settingsRoutes);
 
 module.exports = router;

@@ -20,7 +20,7 @@ export default function AdmissionsPage({ admissionTab, chooseAdmissionTab }) {
             </p>
           </div>
           <div className="admissions-guidance"><div><article><span>01</span><h3>Choose a form</h3><p>Select Online Admission Form to provide student and parent details, class choice, address and supporting documents.</p></article><article><span>02</span><h3>Prepare documents</h3><p>Have the requested supporting documents ready. Accepted formats and per-file limits are shown beside the upload fields.</p></article><article><span>03</span><h3>Review before submitting</h3><p>Check that details are complete and accurate. Class options are listed in the application form; ask the school to confirm any questions.</p></article></div></div>
-          <p className="form-demo-note">Demonstration only: submissions are not transmitted or stored. A unique Application ID requires a future school submission system.</p>
+          <p className="form-demo-note">Online submissions are sent directly to the Siddhant High School admissions office and receive a confirmation Application ID.</p>
           <div className="form-shell">
             <div className="form-tabs" role="tablist" aria-label="Admissions forms">
               <button
@@ -61,7 +61,7 @@ export default function AdmissionsPage({ admissionTab, chooseAdmissionTab }) {
                 <p>
                   {admissionTab === "application"
                     ? "Complete all required fields and attach the supporting documents before submitting."
-                    : "Complete the six fields in this demonstration form. Your enquiry will not be sent to the school."}
+                    : "Complete the fields below to send your enquiry directly to our admissions team."}
                 </p>
               </div>
               {admissionTab === "application" ? <AdmissionForm /> : <EnquiryForm />}

@@ -3,15 +3,19 @@ import { footerExplorePages, footerSchoolLifePages } from "../../data/navigation
 import { logo } from "../../data/siteImages";
 import { RouteLink } from "../../routing/NavigationContext";
 
-export default function SiteFooter() {
+export default function SiteFooter({ schoolSettings }) {
+  const schoolName = schoolSettings?.school_name || "Siddhant High School";
+  const societyName = schoolSettings?.society_name || "Shubham Education & Welfare Society";
+  const officeHours = schoolSettings?.office_hours || "8:00 AM – 2:00 PM";
+
   return (
     <footer id="footer">
       <div className="footer-main">
         <div className="footer-identity">
-          <RouteLink className="footer-brand" to="/" aria-label="Siddhant High School home">
-            <img src={logo} alt="Siddhant High School logo" />
+          <RouteLink className="footer-brand" to="/" aria-label={`${schoolName} home`}>
+            <img src={logo} alt={`${schoolName} logo`} />
             <span>
-              <strong>Siddhant High School</strong>
+              <strong>{schoolName}</strong>
               <small>Knowledge &middot; Character &middot; Purpose</small>
             </span>
           </RouteLink>
@@ -46,9 +50,9 @@ export default function SiteFooter() {
             <RouteLink to="/admissions?form=application">Online Admission</RouteLink>
             <RouteLink to="/admissions?form=enquiry">General Enquiry</RouteLink>
           </div>
-          <p className="footer-office-hours"><span>Office hours</span>8:00 AM &ndash; 2:00 PM</p>
+          <p className="footer-office-hours"><span>Office hours</span>{officeHours}</p>
           <div className="footer-admissions-cta">
-            <p>Begin your journey with Siddhant High School.</p>
+            <p>Begin your journey with {schoolName}.</p>
             <div>
               <RouteLink className="footer-action-primary" to="/admissions?form=application">Apply for Admission <Arrow /></RouteLink>
               <RouteLink className="footer-action-secondary" to="/admissions?form=enquiry">Send an Enquiry <Arrow /></RouteLink>
@@ -57,8 +61,8 @@ export default function SiteFooter() {
         </div>
       </div>
       <div className="footer-bottom">
-        <span>&copy; 2026 Siddhant High School. All rights reserved.</span>
-        <span>Operated by Shubham Education &amp; Welfare Society.</span>
+        <span>&copy; 2026 {schoolName}. All rights reserved.</span>
+        <span>Operated by {societyName}.</span>
       </div>
     </footer>
   );

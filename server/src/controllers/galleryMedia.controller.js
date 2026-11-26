@@ -8,6 +8,25 @@ const asyncHandler = require("../utils/asyncHandler");
 const { AUDIT_ACTIONS, GALLERY_CATEGORIES } = require("../constants/enums");
 const { escapeRegexLiteral, getSearchTerm, parsePositiveInteger } = require("../utils/searchText");
 
+const galleryUploadDir = path.resolve(__dirname, "../../uploads/gallery");
+
+const resolveSafeGalleryFilePath = (mediaUrl) => {
+  if (typeof mediaUrl !== "string" || !mediaUrl.startsWith("/uploads/gallery/")) {
+    return null;
+  }
+  const filename = path.basename(mediaUrl);
+  const absolutePath = path.resolve(galleryUploadDir, filename);
+  if (!absolutePath.startsWith(`${galleryUploadDir}${path.sep}`)) {
+    return null;
+  }
+  return absolutePath;
+};
+
+const hasServableLocalFile = (mediaUrl) => {
+  const filePath = resolveSafeGalleryFilePath(mediaUrl);
+  return Boolean(filePath && fs.existsSync(filePath));
+};
+
 /**
  * Upload single or multiple images to Campus Media Gallery
  */
@@ -29,56 +48,80 @@ const uploadGalleryMedia = asyncHandler(async (req, res) => {
     ? category
     : "Campus";
 
-  const mediaRecordsToInsert = files.map((file, index) => {
-    // Generate clean human-readable title from original filename
-    const ext = path.extname(file.originalname);
-    const rawTitle = path
-      .basename(file.originalname, ext)
-      .replace(/[_-]+/g, " ")
-      .trim();
-    const formattedTitle =
-      rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1) || "Campus Photograph";
-
-    return {
-      title: req.body.title && files.length === 1 ? req.body.title.trim() : formattedTitle,
-      category: validCategory,
-      media_type: "image",
-      media_url: `/uploads/gallery/${file.filename}`,
-      file_size: file.size,
-      mime_type: file.mimetype,
-      tags: parsedTags,
-      display_order: index,
-      uploaded_by: req.user._id,
-    };
-  });
-
-  const createdMedia = await GalleryMedia.insertMany(mediaRecordsToInsert);
-
-  // Write audit log
   try {
-    await AuditLog.create({
-      admin_user_id: req.user._id,
-      action: AUDIT_ACTIONS.MEDIA_UPLOAD,
-      target_entity: "GalleryMedia",
-      target_id: createdMedia[0]?._id?.toString() || "bulk",
-      metadata: {
-        count: createdMedia.length,
-        category: validCategory,
-        files: createdMedia.map((m) => ({ id: m._id, title: m.title, url: m.media_url })),
-      },
-      ip_address: req.ip || req.connection?.remoteAddress || null,
-    });
-  } catch (auditErr) {
-    console.warn("Notice: Failed to write audit log for media upload:", auditErr.message);
-  }
+    const mediaRecordsToInsert = await Promise.all(
+      files.map(async (file, index) => {
+        // Generate clean human-readable title from original filename
+        const ext = path.extname(file.originalname);
+        const rawTitle = path
+          .basename(file.originalname, ext)
+          .replace(/[_-]+/g, " ")
+          .trim();
+        const formattedTitle =
+          rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1) || "Campus Photograph";
 
-  return res.status(201).json(
-    new ApiResponse(
-      201,
-      createdMedia,
-      `Successfully uploaded ${createdMedia.length} image(s)`
-    )
-  );
+        const mediaId = new mongoose.Types.ObjectId();
+        const imageBuffer = Buffer.isBuffer(file.buffer)
+          ? file.buffer
+          : await fs.promises.readFile(file.path);
+
+        return {
+          _id: mediaId,
+          title: req.body.title && files.length === 1 ? req.body.title.trim() : formattedTitle,
+          category: validCategory,
+          media_type: "image",
+          media_url: `/api/v1/gallery/${mediaId}/image`,
+          file_size: file.size || imageBuffer.length,
+          mime_type: file.mimetype,
+          image_data: imageBuffer,
+          has_binary: true,
+          tags: parsedTags,
+          display_order: index,
+          uploaded_by: req.user._id,
+        };
+      })
+    );
+
+    const insertedMedia = await GalleryMedia.insertMany(mediaRecordsToInsert);
+    const createdMedia = insertedMedia.map((doc) => {
+      const obj = typeof doc.toObject === "function" ? doc.toObject() : { ...doc };
+      delete obj.image_data;
+      return obj;
+    });
+
+    // Write audit log
+    try {
+      await AuditLog.create({
+        admin_user_id: req.user._id,
+        action: AUDIT_ACTIONS.MEDIA_UPLOAD,
+        target_entity: "GalleryMedia",
+        target_id: createdMedia[0]?._id?.toString() || "bulk",
+        metadata: {
+          count: createdMedia.length,
+          category: validCategory,
+          files: createdMedia.map((m) => ({ id: m._id, title: m.title, url: m.media_url })),
+        },
+        ip_address: req.ip || req.connection?.remoteAddress || null,
+      });
+    } catch (auditErr) {
+      console.warn("Notice: Failed to write audit log for media upload:", auditErr.message);
+    }
+
+    return res.status(201).json(
+      new ApiResponse(
+        201,
+        createdMedia,
+        `Successfully uploaded ${createdMedia.length} image(s)`
+      )
+    );
+  } finally {
+    // Clean up temporary disk files now that image binaries live in MongoDB
+    await Promise.all(
+      files
+        .filter((file) => file?.path)
+        .map((file) => fs.promises.unlink(file.path).catch(() => {}))
+    );
+  }
 });
 
 /**
@@ -121,10 +164,24 @@ const getAllGalleryMedia = asyncHandler(async (req, res) => {
     dbQuery = dbQuery.skip((parsedPage - 1) * parsedLimit).limit(parsedLimit);
   }
 
-  const [mediaList, total] = await Promise.all([
+  const [rawMediaList, rawTotal] = await Promise.all([
     dbQuery,
     GalleryMedia.countDocuments(query),
   ]);
+
+  const mediaList = rawMediaList.filter((item) => {
+    if (
+      typeof item?.media_url === "string" &&
+      item.media_url.startsWith("/uploads/gallery/") &&
+      !item.has_binary
+    ) {
+      return hasServableLocalFile(item.media_url);
+    }
+    return true;
+  });
+
+  const removedUnservable = rawMediaList.length - mediaList.length;
+  const total = Math.max(0, rawTotal - removedUnservable);
 
   return res.status(200).json(
     new ApiResponse(200, mediaList, "Gallery media retrieved successfully", {
@@ -156,6 +213,47 @@ const getGalleryMediaById = asyncHandler(async (req, res) => {
   return res.status(200).json(
     new ApiResponse(200, media, "Gallery media item retrieved successfully")
   );
+});
+
+/**
+ * Serve binary image content for a gallery item (persisted in MongoDB or local disk fallback)
+ */
+const getGalleryMediaImage = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    throw new ApiError(400, "Invalid media ID");
+  }
+
+  const mediaQuery = GalleryMedia.findById(id);
+  const media =
+    typeof mediaQuery?.select === "function"
+      ? await mediaQuery.select("+image_data")
+      : await mediaQuery;
+
+  if (!media) {
+    throw new ApiError(404, "Gallery media item not found");
+  }
+
+  if (media.image_data && media.image_data.length > 0) {
+    const buffer = Buffer.isBuffer(media.image_data)
+      ? media.image_data
+      : Buffer.from(media.image_data.buffer || media.image_data);
+    res.setHeader("Content-Type", media.mime_type || "image/jpeg");
+    res.setHeader("Content-Length", buffer.length);
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    return res.status(200).send(buffer);
+  }
+
+  const localPath = resolveSafeGalleryFilePath(media.media_url);
+  if (localPath && fs.existsSync(localPath)) {
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    return res.sendFile(localPath);
+  }
+
+  throw new ApiError(404, "Gallery image file not found");
 });
 
 /**
@@ -273,9 +371,8 @@ const updateGalleryMedia = asyncHandler(async (req, res) => {
  * Helper to delete physical file from disk if stored locally
  */
 const removeLocalFile = async (mediaUrl) => {
-  if (typeof mediaUrl === "string" && mediaUrl.startsWith("/uploads/gallery/")) {
-    const filename = path.basename(mediaUrl);
-    const absolutePath = path.join(__dirname, "../../uploads/gallery", filename);
+  const absolutePath = resolveSafeGalleryFilePath(mediaUrl);
+  if (absolutePath) {
     try {
       if (fs.existsSync(absolutePath)) {
         await fs.promises.unlink(absolutePath);
@@ -364,6 +461,7 @@ module.exports = {
   uploadGalleryMedia,
   getAllGalleryMedia,
   getGalleryMediaById,
+  getGalleryMediaImage,
   createGalleryMediaDirect,
   updateGalleryMedia,
   deleteGalleryMedia,

@@ -9,7 +9,7 @@ const ApiError = require("./utils/apiError");
 const app = express();
 
 // Do not derive client addresses from untrusted forwarded headers.
-app.set("trust proxy", false);
+app.set("trust proxy", 1);
 
 // Core Middlewares
 const defaultAllowedOrigins = [

@@ -6,19 +6,40 @@ const {
   deleteEnquiry,
 } = require("../controllers/enquiry.controller");
 const { validateEnquiry } = require("../validations/enquiry.validation");
+const { verifyJWT, authorizeRoles } = require("../middlewares/auth.middleware");
+const { requireCsrfToken } = require("../middlewares/csrf.middleware");
+const { ROLES } = require("../constants/enums");
+const { publicEnquiryLimiter } = require("../middlewares/rateLimiter.middleware");
 
 const router = Router();
 
 // Submit General Enquiry (Client)
-router.post("/", validateEnquiry, createEnquiry);
+router.post("/", publicEnquiryLimiter, validateEnquiry, createEnquiry);
 
 // Get all enquiries (Admin)
-router.get("/", getAllEnquiries);
+router.get(
+  "/",
+  verifyJWT,
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMISSIONS_OFFICER),
+  getAllEnquiries
+);
 
 // Update enquiry status (Admin)
-router.patch("/:id/status", updateEnquiryStatus);
+router.patch(
+  "/:id/status",
+  verifyJWT,
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMISSIONS_OFFICER),
+  requireCsrfToken,
+  updateEnquiryStatus
+);
 
 // Delete enquiry (Admin)
-router.delete("/:id", deleteEnquiry);
+router.delete(
+  "/:id",
+  verifyJWT,
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMISSIONS_OFFICER),
+  requireCsrfToken,
+  deleteEnquiry
+);
 
 module.exports = router;

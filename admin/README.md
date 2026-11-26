@@ -25,12 +25,9 @@ pnpm preview
 pnpm lint
 ```
 
-## 🔑 Default Login Credentials
+## 🔑 Administrator Access
 
-- **URL**: `http://localhost:5173/admin/login`
-- **Email**: `admin@siddhanthighschool.edu`
-- **Password**: `admin123`
-- **Role**: `SUPER_ADMIN`
+Administrator credentials are not embedded in the project. They must be provided through the authorized setup process using the configured environment variables.
 
 ## 📁 Key Directories
 

@@ -98,7 +98,7 @@ export const AdminLoginCard = () => {
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="username"
           leftIcon={Mail}
-          placeholder="admin@siddhanthighschool.edu"
+          placeholder="name@example.com"
         />
 
         <div className="relative">

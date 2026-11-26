@@ -44,6 +44,16 @@ const schoolSettingsSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    office_hours: {
+      type: String,
+      trim: true,
+      default: "8:00 AM – 2:00 PM",
+    },
+    map_embed_url: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     updated_by: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AdminUser",

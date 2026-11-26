@@ -1,9 +1,9 @@
-const jwt = require("jsonwebtoken");
 const { AdminUser, AuditLog } = require("../models");
 const { ROLES } = require("../constants/enums");
 const ApiResponse = require("../utils/apiResponse");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("../utils/asyncHandler");
+const { clearCsrfCookie, setCsrfCookie } = require("../middlewares/csrf.middleware");
 
 const getCookieOptions = () => ({
   httpOnly: true,
@@ -28,10 +28,7 @@ const login = asyncHandler(async (req, res) => {
   }
 
   if (!user.is_active) {
-    throw new ApiError(
-      403,
-      "Your account is inactive. Please contact the administrator."
-    );
+    throw new ApiError(401, "Invalid institutional email or password");
   }
 
   const isPasswordValid = await user.isPasswordCorrect(password);
@@ -65,6 +62,7 @@ const login = asyncHandler(async (req, res) => {
   const userResponse = user.toObject();
   delete userResponse.password_hash;
 
+  setCsrfCookie(res, token);
   return res
     .status(200)
     .cookie("accessToken", token, getCookieOptions())
@@ -78,53 +76,29 @@ const login = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Register Admin user (Initial bootstrap or Super Admin only)
+ * @desc    Register a staff account (Super Admin only)
  * @route   POST /api/v1/auth/register
- * @access  Public for 1st admin bootstrap; Super Admin for subsequent admins
+ * @access  Private (Super Admin only)
  */
 const register = asyncHandler(async (req, res) => {
   const { email, password, full_name, role } = req.body;
-  const normalizedEmail = email.toLowerCase().trim();
+  const hasRequestedRole = Object.prototype.hasOwnProperty.call(req.body, "role");
+  const assignedRole = hasRequestedRole ? role : ROLES.ADMISSIONS_OFFICER;
 
-  const totalAdmins = await AdminUser.countDocuments();
-
-  if (totalAdmins > 0) {
-    // Require authenticated SUPER_ADMIN
-    const token =
-      req.cookies?.accessToken ||
-      req.header("Authorization")?.replace("Bearer ", "").trim();
-
-    if (!token) {
-      throw new ApiError(
-        401,
-        "Authentication required: Only a SUPER_ADMIN can register new staff accounts"
-      );
-    }
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
-      throw new ApiError(401, "Invalid or expired session");
-    }
-
-    const requester = await AdminUser.findById(decoded.id);
-    if (!requester || requester.role !== ROLES.SUPER_ADMIN) {
-      throw new ApiError(
-        403,
-        "Access denied: Only a SUPER_ADMIN can register new staff accounts"
-      );
-    }
+  if (!Object.values(ROLES).includes(assignedRole)) {
+    throw new ApiError(
+      400,
+      "Validation failed",
+      [`Role must be one of: ${Object.values(ROLES).join(", ")}`]
+    );
   }
+
+  const normalizedEmail = email.toLowerCase().trim();
 
   const existingUser = await AdminUser.findOne({ email: normalizedEmail });
   if (existingUser) {
     throw new ApiError(409, "An admin account with this email already exists");
   }
-
-  // If first admin bootstrap, force SUPER_ADMIN; otherwise use requested role or default
-  const assignedRole =
-    totalAdmins === 0 ? ROLES.SUPER_ADMIN : role || ROLES.ADMISSIONS_OFFICER;
 
   const newUser = await AdminUser.create({
     email: normalizedEmail,
@@ -140,9 +114,7 @@ const register = asyncHandler(async (req, res) => {
     new ApiResponse(
       201,
       { user: createdUser },
-      totalAdmins === 0
-        ? "Initial Super Admin account initialized successfully"
-        : "Staff account created successfully"
+      "Staff account created successfully"
     )
   );
 });
@@ -170,9 +142,11 @@ const getCurrentUser = asyncHandler(async (req, res) => {
  * @access  Private
  */
 const logout = asyncHandler(async (req, res) => {
+  clearCsrfCookie(res);
   return res
     .status(200)
     .clearCookie("accessToken", getCookieOptions())
+    .clearCookie("shs_admin_token", getCookieOptions())
     .json(new ApiResponse(200, null, "Logged out successfully"));
 });
 

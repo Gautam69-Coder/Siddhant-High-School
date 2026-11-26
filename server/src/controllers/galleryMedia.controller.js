@@ -6,6 +6,26 @@ const ApiResponse = require("../utils/apiResponse");
 const ApiError = require("../utils/apiError");
 const asyncHandler = require("../utils/asyncHandler");
 const { AUDIT_ACTIONS, GALLERY_CATEGORIES } = require("../constants/enums");
+const { escapeRegexLiteral, getSearchTerm, parsePositiveInteger } = require("../utils/searchText");
+
+const galleryUploadDir = path.resolve(__dirname, "../../uploads/gallery");
+
+const resolveSafeGalleryFilePath = (mediaUrl) => {
+  if (typeof mediaUrl !== "string" || !mediaUrl.startsWith("/uploads/gallery/")) {
+    return null;
+  }
+  const filename = path.basename(mediaUrl);
+  const absolutePath = path.resolve(galleryUploadDir, filename);
+  if (!absolutePath.startsWith(`${galleryUploadDir}${path.sep}`)) {
+    return null;
+  }
+  return absolutePath;
+};
+
+const hasServableLocalFile = (mediaUrl) => {
+  const filePath = resolveSafeGalleryFilePath(mediaUrl);
+  return Boolean(filePath && fs.existsSync(filePath));
+};
 
 /**
  * Upload single or multiple images to Campus Media Gallery
@@ -28,56 +48,80 @@ const uploadGalleryMedia = asyncHandler(async (req, res) => {
     ? category
     : "Campus";
 
-  const mediaRecordsToInsert = files.map((file, index) => {
-    // Generate clean human-readable title from original filename
-    const ext = path.extname(file.originalname);
-    const rawTitle = path
-      .basename(file.originalname, ext)
-      .replace(/[_-]+/g, " ")
-      .trim();
-    const formattedTitle =
-      rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1) || "Campus Photograph";
-
-    return {
-      title: req.body.title && files.length === 1 ? req.body.title.trim() : formattedTitle,
-      category: validCategory,
-      media_type: "image",
-      media_url: `/uploads/gallery/${file.filename}`,
-      file_size: file.size,
-      mime_type: file.mimetype,
-      tags: parsedTags,
-      display_order: index,
-      uploaded_by: req.user._id,
-    };
-  });
-
-  const createdMedia = await GalleryMedia.insertMany(mediaRecordsToInsert);
-
-  // Write audit log
   try {
-    await AuditLog.create({
-      admin_user_id: req.user._id,
-      action: AUDIT_ACTIONS.MEDIA_UPLOAD,
-      target_entity: "GalleryMedia",
-      target_id: createdMedia[0]?._id?.toString() || "bulk",
-      metadata: {
-        count: createdMedia.length,
-        category: validCategory,
-        files: createdMedia.map((m) => ({ id: m._id, title: m.title, url: m.media_url })),
-      },
-      ip_address: req.ip || req.connection?.remoteAddress || null,
-    });
-  } catch (auditErr) {
-    console.warn("Notice: Failed to write audit log for media upload:", auditErr.message);
-  }
+    const mediaRecordsToInsert = await Promise.all(
+      files.map(async (file, index) => {
+        // Generate clean human-readable title from original filename
+        const ext = path.extname(file.originalname);
+        const rawTitle = path
+          .basename(file.originalname, ext)
+          .replace(/[_-]+/g, " ")
+          .trim();
+        const formattedTitle =
+          rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1) || "Campus Photograph";
 
-  return res.status(201).json(
-    new ApiResponse(
-      201,
-      createdMedia,
-      `Successfully uploaded ${createdMedia.length} image(s)`
-    )
-  );
+        const mediaId = new mongoose.Types.ObjectId();
+        const imageBuffer = Buffer.isBuffer(file.buffer)
+          ? file.buffer
+          : await fs.promises.readFile(file.path);
+
+        return {
+          _id: mediaId,
+          title: req.body.title && files.length === 1 ? req.body.title.trim() : formattedTitle,
+          category: validCategory,
+          media_type: "image",
+          media_url: `/api/v1/gallery/${mediaId}/image`,
+          file_size: file.size || imageBuffer.length,
+          mime_type: file.mimetype,
+          image_data: imageBuffer,
+          has_binary: true,
+          tags: parsedTags,
+          display_order: index,
+          uploaded_by: req.user._id,
+        };
+      })
+    );
+
+    const insertedMedia = await GalleryMedia.insertMany(mediaRecordsToInsert);
+    const createdMedia = insertedMedia.map((doc) => {
+      const obj = typeof doc.toObject === "function" ? doc.toObject() : { ...doc };
+      delete obj.image_data;
+      return obj;
+    });
+
+    // Write audit log
+    try {
+      await AuditLog.create({
+        admin_user_id: req.user._id,
+        action: AUDIT_ACTIONS.MEDIA_UPLOAD,
+        target_entity: "GalleryMedia",
+        target_id: createdMedia[0]?._id?.toString() || "bulk",
+        metadata: {
+          count: createdMedia.length,
+          category: validCategory,
+          files: createdMedia.map((m) => ({ id: m._id, title: m.title, url: m.media_url })),
+        },
+        ip_address: req.ip || req.connection?.remoteAddress || null,
+      });
+    } catch (auditErr) {
+      console.warn("Notice: Failed to write audit log for media upload:", auditErr.message);
+    }
+
+    return res.status(201).json(
+      new ApiResponse(
+        201,
+        createdMedia,
+        `Successfully uploaded ${createdMedia.length} image(s)`
+      )
+    );
+  } finally {
+    // Clean up temporary disk files now that image binaries live in MongoDB
+    await Promise.all(
+      files
+        .filter((file) => file?.path)
+        .map((file) => fs.promises.unlink(file.path).catch(() => {}))
+    );
+  }
 });
 
 /**
@@ -87,32 +131,57 @@ const getAllGalleryMedia = asyncHandler(async (req, res) => {
   const { category, search, limit, page = 1 } = req.query;
 
   const query = {};
+  const searchTerm = getSearchTerm(search);
+  if (searchTerm === null) {
+    throw new ApiError(400, "Search must be text no longer than 100 characters");
+  }
 
+  if (category !== undefined && (typeof category !== "string" || (category !== "All" && !GALLERY_CATEGORIES.includes(category)))) {
+    throw new ApiError(400, "Invalid gallery category");
+  }
   if (category && category !== "All") {
     query.category = category;
   }
 
-  if (search && search.trim()) {
+  if (searchTerm) {
+    const safeSearch = escapeRegexLiteral(searchTerm);
     query.$or = [
-      { title: { $regex: search.trim(), $options: "i" } },
-      { tags: { $in: [new RegExp(search.trim(), "i")] } },
+      { title: { $regex: safeSearch, $options: "i" } },
+      { tags: { $in: [new RegExp(safeSearch, "i")] } },
     ];
   }
 
   let dbQuery = GalleryMedia.find(query)
-    .populate("uploaded_by", "full_name email")
+    .populate("uploaded_by", "full_name")
     .sort({ display_order: 1, created_at: -1 });
 
-  if (limit) {
-    const parsedLimit = parseInt(limit, 10);
-    const parsedPage = parseInt(page, 10) || 1;
+  if (limit !== undefined) {
+    const parsedLimit = parsePositiveInteger(limit);
+    const parsedPage = parsePositiveInteger(page);
+    if (!parsedLimit || parsedLimit > 100 || !parsedPage) {
+      throw new ApiError(400, "Pagination values are invalid");
+    }
     dbQuery = dbQuery.skip((parsedPage - 1) * parsedLimit).limit(parsedLimit);
   }
 
-  const [mediaList, total] = await Promise.all([
+  const [rawMediaList, rawTotal] = await Promise.all([
     dbQuery,
     GalleryMedia.countDocuments(query),
   ]);
+
+  const mediaList = rawMediaList.filter((item) => {
+    if (
+      typeof item?.media_url === "string" &&
+      item.media_url.startsWith("/uploads/gallery/") &&
+      !item.has_binary
+    ) {
+      return hasServableLocalFile(item.media_url);
+    }
+    return true;
+  });
+
+  const removedUnservable = rawMediaList.length - mediaList.length;
+  const total = Math.max(0, rawTotal - removedUnservable);
 
   return res.status(200).json(
     new ApiResponse(200, mediaList, "Gallery media retrieved successfully", {
@@ -134,7 +203,7 @@ const getGalleryMediaById = asyncHandler(async (req, res) => {
 
   const media = await GalleryMedia.findById(id).populate(
     "uploaded_by",
-    "full_name email"
+    "full_name"
   );
 
   if (!media) {
@@ -147,9 +216,53 @@ const getGalleryMediaById = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Serve binary image content for a gallery item (persisted in MongoDB or local disk fallback)
+ */
+const getGalleryMediaImage = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    throw new ApiError(400, "Invalid media ID");
+  }
+
+  const mediaQuery = GalleryMedia.findById(id);
+  const media =
+    typeof mediaQuery?.select === "function"
+      ? await mediaQuery.select("+image_data")
+      : await mediaQuery;
+
+  if (!media) {
+    throw new ApiError(404, "Gallery media item not found");
+  }
+
+  if (media.image_data && media.image_data.length > 0) {
+    const buffer = Buffer.isBuffer(media.image_data)
+      ? media.image_data
+      : Buffer.from(media.image_data.buffer || media.image_data);
+    res.setHeader("Content-Type", media.mime_type || "image/jpeg");
+    res.setHeader("Content-Length", buffer.length);
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    return res.status(200).send(buffer);
+  }
+
+  const localPath = resolveSafeGalleryFilePath(media.media_url);
+  if (localPath && fs.existsSync(localPath)) {
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    return res.sendFile(localPath);
+  }
+
+  throw new ApiError(404, "Gallery image file not found");
+});
+
+/**
  * Create gallery item with direct URL (e.g. external asset or CDN link)
  */
 const createGalleryMediaDirect = asyncHandler(async (req, res) => {
+  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+    throw new ApiError(400, "Request body must be a JSON object");
+  }
   const {
     title,
     category = "Campus",
@@ -159,8 +272,35 @@ const createGalleryMediaDirect = asyncHandler(async (req, res) => {
     display_order = 0,
   } = req.body;
 
-  if (!title?.trim() || !media_url?.trim()) {
+  if (typeof title !== "string" || !title.trim() || typeof media_url !== "string" || !media_url.trim()) {
     throw new ApiError(400, "Title and media URL are required");
+  }
+  if (thumbnail_url !== undefined && thumbnail_url !== null && typeof thumbnail_url !== "string") {
+    throw new ApiError(400, "Thumbnail URL must be text");
+  }
+  if (typeof category !== "string" || !GALLERY_CATEGORIES.includes(category)) {
+    throw new ApiError(400, "Invalid gallery category");
+  }
+  const isSafeMediaUrl = (value) => {
+    if (value.startsWith("/uploads/gallery/")) {
+      return /^\/uploads\/gallery\/[a-zA-Z0-9_.-]+$/.test(value);
+    }
+    try {
+      const url = new URL(value);
+      return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password;
+    } catch {
+      return false;
+    }
+  };
+  if (!isSafeMediaUrl(media_url) || (thumbnail_url && !isSafeMediaUrl(thumbnail_url))) {
+    throw new ApiError(400, "Media URLs must use HTTP, HTTPS, or a local gallery path");
+  }
+  if (tags !== undefined && (!Array.isArray(tags) || tags.some((tag) => typeof tag !== "string"))) {
+    throw new ApiError(400, "Tags must be an array of text values");
+  }
+  const parsedDisplayOrder = Number(display_order);
+  if (!Number.isFinite(parsedDisplayOrder)) {
+    throw new ApiError(400, "Display order must be a finite number");
   }
 
   const media = await GalleryMedia.create({
@@ -170,7 +310,7 @@ const createGalleryMediaDirect = asyncHandler(async (req, res) => {
     media_url: media_url.trim(),
     thumbnail_url: thumbnail_url?.trim() || null,
     tags: Array.isArray(tags) ? tags : [],
-    display_order: Number(display_order) || 0,
+    display_order: parsedDisplayOrder,
     uploaded_by: req.user._id,
   });
 
@@ -216,7 +356,7 @@ const updateGalleryMedia = asyncHandler(async (req, res) => {
     id,
     { $set: updates },
     { returnDocument: "after", runValidators: true }
-  ).populate("uploaded_by", "full_name email");
+  ).populate("uploaded_by", "full_name");
 
   if (!media) {
     throw new ApiError(404, "Gallery media item not found");
@@ -231,9 +371,8 @@ const updateGalleryMedia = asyncHandler(async (req, res) => {
  * Helper to delete physical file from disk if stored locally
  */
 const removeLocalFile = async (mediaUrl) => {
-  if (typeof mediaUrl === "string" && mediaUrl.startsWith("/uploads/gallery/")) {
-    const filename = path.basename(mediaUrl);
-    const absolutePath = path.join(__dirname, "../../uploads/gallery", filename);
+  const absolutePath = resolveSafeGalleryFilePath(mediaUrl);
+  if (absolutePath) {
     try {
       if (fs.existsSync(absolutePath)) {
         await fs.promises.unlink(absolutePath);
@@ -289,7 +428,8 @@ const deleteGalleryMedia = asyncHandler(async (req, res) => {
  * Bulk delete gallery media items
  */
 const bulkDeleteGalleryMedia = asyncHandler(async (req, res) => {
-  const { ids } = req.body;
+  const body = req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {};
+  const { ids } = body;
 
   if (!Array.isArray(ids) || ids.length === 0) {
     throw new ApiError(400, "Please provide an array of media IDs to delete");
@@ -321,6 +461,7 @@ module.exports = {
   uploadGalleryMedia,
   getAllGalleryMedia,
   getGalleryMediaById,
+  getGalleryMediaImage,
   createGalleryMediaDirect,
   updateGalleryMedia,
   deleteGalleryMedia,

@@ -11,6 +11,7 @@ const verifyJWT = asyncHandler(async (req, res, next) => {
     req.cookies?.accessToken ||
     req.cookies?.shs_admin_token ||
     req.header("Authorization")?.replace("Bearer ", "").trim();
+  const cookieToken = req.cookies?.accessToken || req.cookies?.shs_admin_token;
 
   if (!token) {
     throw new ApiError(
@@ -43,7 +44,35 @@ const verifyJWT = asyncHandler(async (req, res, next) => {
   }
 
   req.user = user;
+  req.authToken = token;
+  req.authMethod = cookieToken ? "cookie" : "bearer";
+  req.authExpiresAt = decoded.exp;
   next();
+});
+
+// Public news endpoints can use an authenticated CMS session to expose drafts
+// to authorized staff while continuing to serve published records publicly.
+const optionalVerifyJWT = asyncHandler(async (req, res, next) => {
+  const cookieToken = req.cookies?.accessToken || req.cookies?.shs_admin_token;
+  const bearerToken = req.header("Authorization")?.replace("Bearer ", "").trim();
+  const token = cookieToken || bearerToken;
+  if (!token) return next();
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch {
+    return next();
+  }
+
+  const user = await AdminUser.findById(decoded.id).select("-password_hash");
+  if (user?.is_active) {
+    req.user = user;
+    req.authToken = token;
+    req.authMethod = cookieToken ? "cookie" : "bearer";
+    req.authExpiresAt = decoded.exp;
+  }
+  return next();
 });
 
 /**
@@ -62,4 +91,4 @@ const authorizeRoles = (...allowedRoles) => {
   };
 };
 
-module.exports = { verifyJWT, authorizeRoles };
+module.exports = { verifyJWT, optionalVerifyJWT, authorizeRoles };

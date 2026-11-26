@@ -1,4 +1,10 @@
-import api, { getFileUrl } from './api';
+import api from './api';
+
+const ADMISSION_DOCUMENT_FIELDS = new Set([
+  'student_photo',
+  'birth_certificate',
+  'previous_school_report',
+]);
 
 /**
  * Normalizes backend Admission document for frontend consumption in ApplicationsTable
@@ -14,30 +20,27 @@ export const normalizeAdmission = (raw) => {
       type: 'IMAGE',
       size: 'Uploaded',
       verified: true,
-      url: getFileUrl(raw.documents.student_photo),
-      rawPath: raw.documents.student_photo,
+      accessField: 'student_photo',
     });
   }
   if (raw.documents?.birth_certificate) {
-    const isPdf = raw.documents.birth_certificate.toLowerCase().endsWith('.pdf');
+    const isPdf = raw.document_mime_types?.birth_certificate === 'application/pdf' || raw.documents.birth_certificate.toLowerCase().endsWith('.pdf');
     docs.push({
       name: 'Birth Certificate',
       type: isPdf ? 'PDF' : 'IMAGE',
       size: 'Uploaded',
       verified: true,
-      url: getFileUrl(raw.documents.birth_certificate),
-      rawPath: raw.documents.birth_certificate,
+      accessField: 'birth_certificate',
     });
   }
   if (raw.documents?.previous_school_report) {
-    const isPdf = raw.documents.previous_school_report.toLowerCase().endsWith('.pdf');
+    const isPdf = raw.document_mime_types?.previous_school_report === 'application/pdf' || raw.documents.previous_school_report.toLowerCase().endsWith('.pdf');
     docs.push({
       name: 'Previous School Report',
       type: isPdf ? 'PDF' : 'IMAGE',
       size: 'Uploaded',
       verified: false,
-      url: getFileUrl(raw.documents.previous_school_report),
-      rawPath: raw.documents.previous_school_report,
+      accessField: 'previous_school_report',
     });
   }
 
@@ -91,6 +94,17 @@ export const admissionService = {
     const response = await api.get(`/admissions/${id}`);
     const data = response.data?.data || response.data;
     return normalizeAdmission(data);
+  },
+
+  getAdmissionDocument: async (id, field) => {
+    if (!ADMISSION_DOCUMENT_FIELDS.has(field)) {
+      throw new Error('Admission document not found.');
+    }
+    const response = await api.get(
+      `/admissions/${encodeURIComponent(id)}/documents/${field}`,
+      { responseType: 'blob' }
+    );
+    return response.data;
   },
 
   /**

@@ -9,9 +9,10 @@ const { EVENT_CATEGORIES } = require("../constants/enums");
 
 // Create a new event
 const createCalendarEvent = asyncHandler(async (req, res) => {
-  const { title, event_date, category } = req.body;
+  const body = req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {};
+  const { title, event_date, category } = body;
 
-  if (!title?.trim() || !event_date || !category) {
+  if (typeof title !== "string" || !title.trim() || typeof event_date !== "string" || !event_date || typeof category !== "string" || !category) {
     throw new ApiError(400, "Title, event date and category are required");
   }
 
@@ -56,15 +57,19 @@ const updateCalendarEvent = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid event ID");
   }
 
+  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+    throw new ApiError(400, "Request body must be a JSON object");
+  }
   const { title, event_date, category } = req.body;
   const updates = {};
 
   if (title !== undefined) {
-    if (!title.trim()) throw new ApiError(400, "Title cannot be empty");
+    if (typeof title !== "string" || !title.trim()) throw new ApiError(400, "Title cannot be empty");
     updates.title = title.trim();
   }
 
   if (event_date !== undefined) {
+    if (typeof event_date !== "string") throw new ApiError(400, "Invalid event date");
     const parsedDate = new Date(`${event_date}T00:00:00.000Z`);
     if (
       Number.isNaN(parsedDate.getTime()) ||
@@ -76,7 +81,7 @@ const updateCalendarEvent = asyncHandler(async (req, res) => {
   }
 
   if (category !== undefined) {
-    if (!EVENT_CATEGORIES.includes(category)) {
+    if (typeof category !== "string" || !EVENT_CATEGORIES.includes(category)) {
       throw new ApiError(400, "Invalid event category");
     }
     updates.category = category;

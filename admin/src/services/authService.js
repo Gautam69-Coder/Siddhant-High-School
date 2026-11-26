@@ -1,4 +1,4 @@
-import api from './api';
+import api, { clearCsrfToken } from './api';
 
 export const authService = {
   /**
@@ -6,6 +6,7 @@ export const authService = {
    * @param {Object} credentials - { email, password }
    */
   login: async ({ email, password }) => {
+    clearCsrfToken();
     const response = await api.post('/auth/login', { email, password });
     return response.data;
   },
@@ -28,6 +29,7 @@ export const authService = {
       // Ignore network errors on logout
     } finally {
       localStorage.removeItem('shs_admin_token');
+      clearCsrfToken();
     }
   },
 

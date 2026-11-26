@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siddhant High School | Attendance</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+
+    <?!= include('style'); ?>
+</head>
+<body>
+
+    <div class="top-strip">
+        <span>COMMITTED TO HOLISTIC EDUCATION &amp; A HAPPY SOCIETY</span>
+        <span class="contact-link">✦ ATTENDANCE PORTAL</span>
+    </div>
+
+    <header class="main-header">
+        <div class="school-brand">
+            <div class="school-logo">
+                <img src="data:image/jpeg;base64,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" alt="Siddhant High School Logo">
+            </div>
+
+            <div class="brand-text">
+                <h2>Siddhant High School</h2>
+                <p>KNOWLEDGE · CHARACTER · PURPOSE</p>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <nav class="view-switcher" aria-label="Portal View">
+                <button type="button" class="nav-pill active" id="navTeacherBtn" aria-label="Teacher View" title="Teacher View">
+                    <span class="label-full">Teacher View</span>
+                    <span class="label-short" aria-hidden="true">T</span>
+                </button>
+                <button type="button" class="nav-pill" id="navPrincipalBtn" aria-label="Principal View" title="Principal View">
+                    <span class="label-full">Principal View</span>
+                    <span class="label-short" aria-hidden="true">P</span>
+                </button>
+            </nav>
+            <span class="portal-label" id="portalRoleLabel">TEACHER PORTAL</span>
+            <div class="header-avatar" id="userAvatar" title="Signed-in user">T</div>
+        </div>
+    </header>
+
+    <div id="toastBanner" class="toast-banner" role="status" aria-live="polite" hidden></div>
+
+    <main class="page-container">
+
+        <!-- =================================================
+             TEACHER PORTAL VIEW
+             ================================================= -->
+        <div id="teacherView">
+            <section class="page-intro">
+                <div class="eyebrow">
+                    <span class="pink-line" aria-hidden="true"></span>
+                    TEACHER DASHBOARD
+                </div>
+
+                <div class="intro-content">
+                    <div>
+                        <h1>Student <em>Attendance</em></h1>
+                        <p>
+                            Manage daily attendance and keep track of
+                            student participation with confidence.
+                        </p>
+                    </div>
+
+                    <div class="date-display">
+                        <span class="date-label">TODAY'S DATE</span>
+                        <strong id="todayDate">--</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="filter-section">
+                <div class="section-heading">
+                    <div>
+                        <div class="eyebrow">
+                            <span class="pink-line" aria-hidden="true"></span>
+                            ATTENDANCE DETAILS
+                        </div>
+
+                        <h2>Select your <em>class</em></h2>
+                    </div>
+
+                    <p>Choose the details before loading or marking attendance.</p>
+                </div>
+
+                <div class="filter-grid">
+
+                    <div class="form-group">
+                        <label for="classSelect">CLASS</label>
+                        <select id="classSelect"></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="divisionSelect">DIVISION</label>
+                        <select id="divisionSelect"></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="attendanceDate">ATTENDANCE DATE</label>
+                        <input type="date" id="attendanceDate">
+                    </div>
+
+                    <button type="button" class="primary-button" id="loadBtn">
+                        Load Students <span aria-hidden="true">→</span>
+                    </button>
+
+                </div>
+            </section>
+
+            <section class="statistics-section">
+
+                <div class="section-heading">
+                    <div>
+                        <div class="eyebrow">
+                            <span class="pink-line" aria-hidden="true"></span>
+                            CLASS OVERVIEW
+                        </div>
+
+                        <h2>Attendance <em>summary</em></h2>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+
+                    <div class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon blue" aria-hidden="true">♙</span>
+                            <span class="stat-caption">01</span>
+                        </div>
+
+                        <p>Total Students</p>
+                        <h3 id="totalCount">0</h3>
+                        <small>Students in this class</small>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon green" aria-hidden="true">✓</span>
+                            <span class="stat-caption">02</span>
+                        </div>
+
+                        <p>Present</p>
+                        <h3 id="presentCount">0</h3>
+                        <small>Students present today</small>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon red" aria-hidden="true">×</span>
+                            <span class="stat-caption">03</span>
+                        </div>
+
+                        <p>Absent</p>
+                        <h3 id="absentCount">0</h3>
+                        <small>Students absent today</small>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon gold" aria-hidden="true">%</span>
+                            <span class="stat-caption">04</span>
+                        </div>
+
+                        <p>Attendance Rate</p>
+                        <h3 id="percentageCount">0%</h3>
+                        <small>Present student percentage</small>
+                    </div>
+
+                </div>
+            </section>
+
+            <section class="attendance-section">
+
+                <div class="section-heading attendance-title">
+                    <div>
+                        <div class="eyebrow">
+                            <span class="pink-line" aria-hidden="true"></span>
+                            DAILY RECORD
+                        </div>
+
+                        <h2>Mark student <em>attendance</em></h2>
+
+                        <p class="section-description">
+                            Select Present or Absent for each student.
+                        </p>
+                    </div>
+
+                    <div class="status-badges">
+                        <div class="record-badge" id="recordStateBadge">Loading...</div>
+                        <div class="student-count" id="studentCountLabel">0 Students</div>
+                    </div>
+                </div>
+
+                <div class="table-toolbar">
+
+                    <div class="search-box">
+                        <span aria-hidden="true">⌕</span>
+
+                        <input
+                            type="text"
+                            id="searchInput"
+                            aria-label="Search by student name or roll number"
+                            placeholder="Search by student name or roll number..."
+                        >
+                    </div>
+
+                    <div class="toolbar-actions">
+                        <button type="button" class="outline-button" id="markAllBtn">
+                            ✓ Mark All Present
+                        </button>
+                        <button type="button" class="outline-button absent-outline" id="markAllAbsentBtn">
+                            × Mark All Absent
+                        </button>
+                    </div>
+
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ROLL NO.</th>
+                                <th>STUDENT NAME</th>
+                                <th>ATTENDANCE STATUS</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="studentTable">
+                            <tr>
+                                <td colspan="3" class="table-empty">Loading class roster...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="attendance-bottom">
+
+                    <div class="attendance-note">
+                        <span aria-hidden="true">✦</span>
+                        Please verify attendance before submitting.
+                    </div>
+
+                    <div class="action-buttons">
+                        <button type="button" class="reset-button" id="resetBtn">
+                            Reset
+                        </button>
+
+                        <button type="button" class="primary-button submit-button" id="submitBtn">
+                            Submit Attendance <span aria-hidden="true">→</span>
+                        </button>
+                    </div>
+
+                </div>
+            </section>
+
+            <section class="result-section" id="resultCard" hidden>
+
+                <div class="eyebrow">
+                    <span class="pink-line" aria-hidden="true"></span>
+                    ATTENDANCE REPORT
+                </div>
+
+                <h2>Attendance <em>saved to Google Sheet</em></h2>
+
+                <p id="resultMessage"></p>
+
+                <div id="resultDetails"></div>
+
+            </section>
+        </div>
+
+        <!-- =================================================
+             PRINCIPAL OVERVIEW VIEW
+             ================================================= -->
+        <div id="principalView" hidden>
+            <section class="page-intro">
+                <div class="eyebrow">
+                    <span class="pink-line" aria-hidden="true"></span>
+                    PRINCIPAL DASHBOARD
+                </div>
+
+                <div class="intro-content">
+                    <div>
+                        <h1>School <em>Attendance Overview</em></h1>
+                        <p>
+                            Monitor daily attendance submission across every class and division in real time.
+                        </p>
+                    </div>
+
+                    <div class="principal-date-controls">
+                        <div class="form-group">
+                            <label for="principalDate">CHECK DATE</label>
+                            <input type="date" id="principalDate">
+                        </div>
+                        <button type="button" class="primary-button" id="loadPrincipalBtn">
+                            Refresh <span aria-hidden="true">→</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="statistics-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon blue" aria-hidden="true">✓</span>
+                            <span class="stat-caption">CLASSES</span>
+                        </div>
+                        <p>Submitted Today</p>
+                        <h3 id="pClassesCount">0 / 0</h3>
+                        <small id="pPendingLabel">0 pending</small>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon green" aria-hidden="true">♙</span>
+                            <span class="stat-caption">PRESENT</span>
+                        </div>
+                        <p>Total Present</p>
+                        <h3 id="pPresentCount">0</h3>
+                        <small id="pTotalStudentsLabel">Out of 0 students</small>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon red" aria-hidden="true">×</span>
+                            <span class="stat-caption">ABSENT</span>
+                        </div>
+                        <p>Total Absent</p>
+                        <h3 id="pAbsentCount">0</h3>
+                        <small>Across submitted classes</small>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-top">
+                            <span class="stat-icon gold" aria-hidden="true">%</span>
+                            <span class="stat-caption">SCHOOL RATE</span>
+                        </div>
+                        <p>Overall Attendance</p>
+                        <h3 id="pOverallPct">0%</h3>
+                        <small>School-wide average</small>
+                    </div>
+                </div>
+            </section>
+
+            <section class="attendance-section">
+                <div class="section-heading">
+                    <div>
+                        <div class="eyebrow">
+                            <span class="pink-line" aria-hidden="true"></span>
+                            CLASS-WISE STATUS
+                        </div>
+                        <h2>Division <em>breakdown</em></h2>
+                    </div>
+                    <p>Click "View / Edit" on any division to inspect or update its student list.</p>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>CLASS</th>
+                                <th>STATUS</th>
+                                <th>PRESENT / TOTAL</th>
+                                <th>RATE</th>
+                                <th>ABSENT STUDENTS</th>
+                                <th>MARKED BY</th>
+                                <th>ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody id="principalTableBody">
+                            <tr>
+                                <td colspan="7" class="table-empty">Select a date and click Refresh.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <section class="bottom-message">
+
+            <div>
+                <span class="eyebrow light-eyebrow">
+                    SIDDHANT HIGH SCHOOL
+                </span>
+
+                <h2>
+                    Learning with purpose,<br>
+                    <em>growing with confidence.</em>
+                </h2>
+            </div>
+
+            <p>
+                Every student matters. Every day counts.
+                Thank you for keeping accurate attendance records.
+            </p>
+
+        </section>
+
+    </main>
+
+    <!-- Confirmation & Principal Passcode Modals -->
+    <div id="confirmModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" hidden>
+        <div class="modal-card">
+            <h3 id="confirmTitle">Confirm Action</h3>
+            <p id="confirmMessage"></p>
+            <div class="modal-actions">
+                <button type="button" class="reset-button" id="confirmCancelBtn">Cancel</button>
+                <button type="button" class="primary-button" id="confirmOkBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pinModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="pinTitle" hidden>
+        <div class="modal-card">
+            <h3 id="pinTitle">Principal Verification</h3>
+            <p>Enter the Principal passcode to view the school-wide attendance summary.</p>
+            <div class="form-group">
+                <label for="principalPinInput">PRINCIPAL PASSCODE</label>
+                <input type="password" id="principalPinInput" placeholder="Enter passcode" autocomplete="off">
+            </div>
+            <p id="pinErrorMsg" class="modal-error" hidden></p>
+            <div class="modal-actions">
+                <button type="button" class="reset-button" id="pinCancelBtn">Cancel</button>
+                <button type="button" class="primary-button" id="pinVerifyBtn">Unlock Overview</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="main-footer">
+
+        <div class="footer-content">
+
+            <div class="footer-brand">
+
+                <div class="school-brand">
+                    <div class="school-logo footer-logo">
+                        <img src="data:image/jpeg;base64,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" alt="Siddhant High School Logo">
+                    </div>
+
+                    <div class="brand-text">
+                        <h2>Siddhant High School</h2>
+                        <p>KNOWLEDGE · CHARACTER · PURPOSE</p>
+                    </div>
+                </div>
+
+                <p>
+                    An environment where curiosity is encouraged,
+                    character is nurtured and every learner is helped to grow.
+                </p>
+
+            </div>
+
+            <div class="footer-links">
+                <h3>Portal</h3>
+                <a href="#" id="footerTeacherLink">Teacher Dashboard</a>
+                <a href="#" id="footerPrincipalLink">Principal Overview</a>
+            </div>
+
+            <div class="footer-links">
+                <h3>Backend</h3>
+                <span>Powered by Google Apps Script</span>
+                <span>Data stored in Google Sheets</span>
+            </div>
+
+        </div>
+
+        <div class="footer-bottom">
+            <span>© 2026 Siddhant High School. All rights reserved.</span>
+            <span>Attendance Management System</span>
+        </div>
+
+    </footer>
+
+    <?!= include('script'); ?>
+
+</body>
+</html>

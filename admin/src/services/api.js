@@ -1,7 +1,18 @@
 import axios from 'axios';
+import { retryCsrfRequestOnce } from './csrfRetry';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 export const SERVER_BASE_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+
+let csrfToken = null;
+let csrfRequest = null;
+let csrfLoaded = false;
+
+export const clearCsrfToken = () => {
+  csrfToken = null;
+  csrfRequest = null;
+  csrfLoaded = false;
+};
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -11,10 +22,38 @@ const api = axios.create({
 
 // Request Interceptor: Attach JWT Token
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     const token = localStorage.getItem('shs_admin_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    const method = (config.method || 'get').toLowerCase();
+    const requestUrl = config.url || '';
+    const isStateChanging = ['post', 'put', 'patch', 'delete'].includes(method);
+    const isLogin = requestUrl.replace(/\/$/, '').endsWith('/auth/login');
+
+    if (isStateChanging && !isLogin) {
+      if (!csrfLoaded) {
+        if (!csrfRequest) {
+          csrfRequest = api.get('/auth/csrf')
+            .then((response) => response.data?.data || {})
+            .finally(() => {
+              csrfRequest = null;
+            });
+        }
+
+        const csrfState = await csrfRequest;
+        csrfToken = csrfState.required ? csrfState.token : null;
+        csrfLoaded = true;
+        if (csrfState.required && !csrfToken) {
+          throw new Error('Unable to obtain the required security token. Please sign in again.');
+        }
+      }
+
+      if (csrfToken) {
+        config.headers['X-CSRF-Token'] = csrfToken;
+      }
     }
     return config;
   },
@@ -25,17 +64,25 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const csrfRetry = retryCsrfRequestOnce({
+      api,
+      error,
+      clearToken: clearCsrfToken,
+    });
+    if (csrfRetry) return csrfRetry;
+
     if (error.response?.status === 401) {
       // Clear token if expired or invalid
       localStorage.removeItem('shs_admin_token');
+      clearCsrfToken();
       if (window.location.pathname !== '/admin/login' && window.location.pathname !== '/login') {
         window.location.href = '/admin/login';
       }
     }
 
     const message =
-      error.response?.data?.message ||
       error.response?.data?.errors?.[0] ||
+      error.response?.data?.message ||
       error.message ||
       'A network error occurred. Please try again.';
 

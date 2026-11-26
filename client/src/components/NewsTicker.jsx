@@ -51,7 +51,7 @@ function TickerGroup({ items, onNavigate, duplicate = false, groupRef }) {
   );
 }
 
-export default function NewsTicker({ onNavigate, announcements = [] }) {
+export default function NewsTicker({ onNavigate, announcements = [], schoolSettings }) {
   const prefersReducedMotion = useReducedMotion();
   const windowRef = useRef(null);
   const groupRef = useRef(null);
@@ -62,6 +62,20 @@ export default function NewsTicker({ onNavigate, announcements = [] }) {
   const [focused, setFocused] = useState(false);
   const paused = hovered || focused;
 
+  const baseTickerItems = [
+    {
+      id: "office-hours",
+      label: `Office Hours: ${schoolSettings?.office_hours || "8:00 AM – 2:00 PM"}`,
+      to: null,
+    },
+    {
+      id: "admissions-open",
+      label: `Admissions Open for Academic Session ${schoolSettings?.academic_year || "2026–27"}`,
+      to: "/admissions",
+    },
+    ...defaultTickerItems.slice(2),
+  ];
+
   const items = announcements.length > 0
     ? [
         ...announcements.slice(0, 3).map((item) => ({
@@ -69,9 +83,9 @@ export default function NewsTicker({ onNavigate, announcements = [] }) {
           label: `${item.is_urgent ? "⚡ Notice: " : "📢 "}${item.title}`,
           to: "/news",
         })),
-        ...defaultTickerItems,
+        ...baseTickerItems,
       ]
-    : defaultTickerItems;
+    : baseTickerItems;
 
   useEffect(() => {
     const tickerWindow = windowRef.current;

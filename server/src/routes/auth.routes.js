@@ -6,7 +6,9 @@ const {
   logout,
   changePassword,
 } = require("../controllers/auth.controller");
-const { verifyJWT } = require("../middlewares/auth.middleware");
+const { verifyJWT, authorizeRoles } = require("../middlewares/auth.middleware");
+const { getCsrfToken, requireCsrfToken } = require("../middlewares/csrf.middleware");
+const { ROLES } = require("../constants/enums");
 const { authLimiter } = require("../middlewares/rateLimiter.middleware");
 const {
   validateLogin,
@@ -16,16 +18,26 @@ const {
 
 const router = Router();
 
-// Public / Rate-limited routes
+// Public login; staff registration requires an authenticated Super Admin.
 router.post("/login", authLimiter, validateLogin, login);
-router.post("/register", authLimiter, validateRegister, register);
+router.post(
+  "/register",
+  authLimiter,
+  verifyJWT,
+  authorizeRoles(ROLES.SUPER_ADMIN),
+  requireCsrfToken,
+  validateRegister,
+  register
+);
 
 // Protected routes (reads HTTP-only cookie or Bearer token)
-router.post("/logout", verifyJWT, logout);
+router.get("/csrf", verifyJWT, getCsrfToken);
+router.post("/logout", verifyJWT, requireCsrfToken, logout);
 router.get("/me", verifyJWT, getCurrentUser);
 router.put(
   "/change-password",
   verifyJWT,
+  requireCsrfToken,
   validateChangePassword,
   changePassword
 );
